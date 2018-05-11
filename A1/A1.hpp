@@ -29,6 +29,8 @@ protected:
 
 private:
 	void initGrid();
+	void initCube();
+	void resetGrid();
 
 	// Fields related to the shader and uniforms.
 	ShaderProgram m_shader;
@@ -40,6 +42,10 @@ private:
 	// Fields related to grid geometry.
 	GLuint m_grid_vao; // Vertex Array Object
 	GLuint m_grid_vbo; // Vertex Buffer Object
+
+	// Cube geometry
+	GLuint m_cube_vao; // Cube Array Object
+	GLuint m_cube_vbo; // Cube Buffer Object
 
 	// Matrices controlling the camera and projection.
 	glm::mat4 proj;

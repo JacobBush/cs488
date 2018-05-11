@@ -52,6 +52,7 @@ void A1::init()
 	col_uni = m_shader.getUniformLocation( "colour" );
 
 	initGrid();
+	initCube();
 
 	// Set up initial view and projection matrices (need to do this here,
 	// since it depends on the GLFW window being set up correctly).
@@ -117,6 +118,83 @@ void A1::initGrid()
 	CHECK_GL_ERRORS;
 }
 
+//
+void A1::initCube() {
+
+	// It would be more efficient to render in a strip,
+	// But its simpler just to draw the tris individually
+
+	size_t sz = 3*3*2*6;
+
+	float verts[sz] = {
+		// Front
+		0,0,0,
+		1,0,0,
+		0,1,0,
+		0,1,0,
+		1,0,0,
+		1,1,0,
+		// Right
+		1,0,0,
+		1,0,-1,
+		1,1,-1,
+		1,0,0,
+		1,1,-1,
+		1,1,0,
+		// Left
+		0,0,0,
+		0,1,0,
+		0,0,-1,
+		0,1,0,
+		0,1,-1,
+		0,0,-1,
+		// Back
+		0,0,-1,
+		0,1,-1,
+		1,1,-1,
+		0,0,-1,
+		1,1,-1,
+		1,0,-1,
+		//Bottom
+		0,0,0,
+		0,0,-1,
+		1,0,-1,
+		0,0,0,
+		1,0,-1,
+		1,0,0,
+		//Top
+		0,1,0,
+		1,1,-1,
+		0,1,-1,
+		0,1,0,
+		1,1,0,
+		1,1,-1
+	};
+
+	// Create the vertex array to record buffer assignments.
+	glGenVertexArrays( 1, &m_cube_vao );
+	glBindVertexArray( m_cube_vao );
+
+	// Create the cube vertex buffer
+	glGenBuffers( 1, &m_cube_vbo );
+	glBindBuffer( GL_ARRAY_BUFFER, m_cube_vbo );
+	glBufferData( GL_ARRAY_BUFFER, sz*sizeof(float),
+		&verts, GL_STATIC_DRAW );
+
+	// Specify the means of extracting the position values properly.
+	GLint posAttrib = m_shader.getAttribLocation( "position" );
+	glEnableVertexAttribArray( posAttrib );
+	glVertexAttribPointer( posAttrib, 3, GL_FLOAT, GL_FALSE, 0, nullptr );
+
+	// Reset state to prevent rogue code from messing with *my* 
+	// stuff!
+	glBindVertexArray( 0 );
+	glBindBuffer( GL_ARRAY_BUFFER, 0 );
+	glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, 0 );
+
+	CHECK_GL_ERRORS;
+}
+
 //----------------------------------------------------------------------------------------
 /*
  * Called once per frame, before guiLogic().
@@ -146,6 +224,10 @@ void A1::guiLogic()
 	ImGui::Begin("Debug Window", &showDebugWindow, ImVec2(100,100), opacity, windowFlags);
 		if( ImGui::Button( "Quit Application" ) ) {
 			glfwSetWindowShouldClose(m_window, GL_TRUE);
+		}
+
+		if( ImGui::Button( "Reset Grid" ) ) {
+			resetGrid();
 		}
 
 		// Eventually you'll create multiple colour widgets with
@@ -207,6 +289,24 @@ void A1::draw()
 		glDrawArrays( GL_LINES, 0, (3+DIM)*4 );
 
 		// Draw the cubes
+
+		// We will by default have the cube in the top left corner of the grid
+		W = glm::translate( W, vec3( 1, 0, 2 ) );
+		glUniformMatrix4fv( M_uni, 1, GL_FALSE, value_ptr( W ) );
+		glBindVertexArray( m_cube_vao );
+
+		// Place 3 cubes in a stack
+		for (int i = 0; i < 3; i++) {
+			// Transform
+			W = glm::translate( W, vec3( 0, 1, 0 ) );
+			glUniformMatrix4fv( M_uni, 1, GL_FALSE, value_ptr( W ) );
+			// Color
+			glUniform3f( col_uni, 1 - 0.5 *i, 0 + 0.5*i, 1 );
+			//Draw
+			glDrawArrays( GL_TRIANGLES, 0, 3*2*6);
+		}
+
+
 		// Highlight the active square.
 	m_shader.disable();
 
@@ -304,8 +404,17 @@ bool A1::keyInputEvent(int key, int action, int mods) {
 
 	// Fill in with event handling code...
 	if( action == GLFW_PRESS ) {
-		// Respond to some key events.
+		if (key == GLFW_KEY_Q) {
+			glfwSetWindowShouldClose(m_window, GL_TRUE);
+		}
+		if (key == GLFW_KEY_R) {
+			resetGrid();
+		}
 	}
 
 	return eventHandled;
+}
+
+void A1::resetGrid() {
+	cout << "resetGrid() called." << endl;
 }
