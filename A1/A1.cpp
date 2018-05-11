@@ -60,6 +60,7 @@ void A1::init()
 
 	initGrid();
 	initCube();
+	initMarker();
 
 	// Set up initial view and projection matrices (need to do this here,
 	// since it depends on the GLFW window being set up correctly).
@@ -202,6 +203,42 @@ void A1::initCube() {
 	CHECK_GL_ERRORS;
 }
 
+//
+void A1::initMarker() {
+	size_t sz = 3*4;
+
+	float verts[sz] = {
+		// Front
+		0,0,0,
+		1,0,0,
+		0,0,1,
+		1,0,1
+	};
+
+	// Create the vertex array to record buffer assignments.
+	glGenVertexArrays( 1, &m_marker_vao );
+	glBindVertexArray( m_marker_vao );
+
+	// Create the cube vertex buffer
+	glGenBuffers( 1, &m_marker_vbo );
+	glBindBuffer( GL_ARRAY_BUFFER, m_marker_vbo );
+	glBufferData( GL_ARRAY_BUFFER, sz*sizeof(float),
+		&verts, GL_STATIC_DRAW );
+
+	// Specify the means of extracting the position values properly.
+	GLint posAttrib = m_shader.getAttribLocation( "position" );
+	glEnableVertexAttribArray( posAttrib );
+	glVertexAttribPointer( posAttrib, 3, GL_FLOAT, GL_FALSE, 0, nullptr );
+
+	// Reset state to prevent rogue code from messing with *my* 
+	// stuff!
+	glBindVertexArray( 0 );
+	glBindBuffer( GL_ARRAY_BUFFER, 0 );
+	glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, 0 );
+
+	CHECK_GL_ERRORS;
+}
+
 //----------------------------------------------------------------------------------------
 /*
  * Called once per frame, before guiLogic().
@@ -314,11 +351,17 @@ void A1::draw()
 				glDrawArrays( GL_TRIANGLES, 0, 3*2*6);
 				// Undo the translate
 				W = glm::translate( W, vec3( -x_coord, -j, -y_coord ) );
-				glUniformMatrix4fv( M_uni, 1, GL_FALSE, value_ptr( W ) );
 			}
 		}
 
 		// Highlight the active square.
+		glDisable( GL_DEPTH_TEST );
+		glBindVertexArray( m_marker_vao );
+		W = glm::translate( W, vec3( current_col % DIM, 0, -(current_col / DIM) ) );
+		glUniformMatrix4fv( M_uni, 1, GL_FALSE, value_ptr( W ) );
+		glUniform3f( col_uni, 1, 0, 0 );
+		glDrawArrays( GL_TRIANGLE_STRIP, 0, 3*4 );
+
 	m_shader.disable();
 
 	// Restore defaults

@@ -30,6 +30,7 @@ protected:
 private:
 	void initGrid();
 	void initCube();
+	void initMarker();
 	void resetGrid();
 	void increaseCurrentStackSize();
 	void decreaseCurrentStackSize();
@@ -48,6 +49,10 @@ private:
 	// Cube geometry
 	GLuint m_cube_vao; // Cube Array Object
 	GLuint m_cube_vbo; // Cube Buffer Object
+
+	// marker geometry
+	GLuint m_marker_vao; // Cube Array Object
+	GLuint m_marker_vbo; // Cube Buffer Object
 
 	// Matrices controlling the camera and projection.
 	glm::mat4 proj;
