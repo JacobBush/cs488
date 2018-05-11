@@ -25,7 +25,7 @@ A1::A1()
 	// Point (x,y) = cube_counts[x + y*DIM]
 	cube_counts = new int[DIM * DIM];
 	memset(cube_counts, 0, DIM * DIM);
-	cube_counts[DIM/2 + DIM * DIM/2] = 3;
+	cube_counts[DIM + 1] = 3;
 }
 
 //----------------------------------------------------------------------------------------
@@ -297,15 +297,15 @@ void A1::draw()
 
 		// Draw the cubes
 
-		// We will by default have the cube in the top left corner of the grid
-		W = glm::translate( W, vec3( 1, 0, 2 ) );
+		// We will by default have the cube at (0,0)
+		W = glm::translate( W, vec3( 1, 0, DIM - 1 ) );
 		glUniformMatrix4fv( M_uni, 1, GL_FALSE, value_ptr( W ) );
 		glBindVertexArray( m_cube_vao );
 
 		// For every value in cube_counts, draw that many cubes
 		for (int i = 0; i < DIM * DIM; i++) {
 			int x_coord = i % DIM;
-			int y_coord = i / DIM;
+			int y_coord = -(i / DIM);
 			int count = cube_counts[i];
 			for (int j = 0; j < count; j++) {
 				W = glm::translate( W, vec3( x_coord, j, y_coord ) );
@@ -421,10 +421,10 @@ bool A1::keyInputEvent(int key, int action, int mods) {
 		if (key == GLFW_KEY_R) {
 			resetGrid();
 		}
-		if (key == GLFW_KEY_EQUAL) {
+		if (key == GLFW_KEY_SPACE) {
 			increaseCurrentStackSize();
 		}
-		if (key == GLFW_KEY_MINUS) {
+		if (key == GLFW_KEY_BACKSPACE) {
 			decreaseCurrentStackSize();
 		}
 	}
@@ -437,10 +437,11 @@ void A1::resetGrid() {
 }
 
 void A1::increaseCurrentStackSize() {
-	cout << "increaseCurrentStackSize() called." << endl;
+	cube_counts[current_col]++;
 }
 
 void A1::decreaseCurrentStackSize() {
-	cout << "decreaseCurrentStackSize() called." << endl;
+	cube_counts[current_col]--;
+	if (cube_counts[current_col] < 0) cube_counts[current_col] = 0;
 }
 
