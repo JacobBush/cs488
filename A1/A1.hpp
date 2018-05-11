@@ -31,6 +31,8 @@ private:
 	void initGrid();
 	void initCube();
 	void resetGrid();
+	void increaseCurrentStackSize();
+	void decreaseCurrentStackSize();
 
 	// Fields related to the shader and uniforms.
 	ShaderProgram m_shader;
@@ -52,5 +54,6 @@ private:
 	glm::mat4 view;
 
 	float colour[3];
+	int *cube_counts;
 	int current_col;
 };

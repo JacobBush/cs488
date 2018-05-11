@@ -21,12 +21,19 @@ A1::A1()
 	colour[0] = 0.0f;
 	colour[1] = 0.0f;
 	colour[2] = 0.0f;
+
+	// Point (x,y) = cube_counts[x + y*DIM]
+	cube_counts = new int[DIM * DIM];
+	memset(cube_counts, 0, DIM * DIM);
+	cube_counts[DIM/2 + DIM * DIM/2] = 3;
 }
 
 //----------------------------------------------------------------------------------------
 // Destructor
 A1::~A1()
-{}
+{
+	delete [] cube_counts;
+}
 
 //----------------------------------------------------------------------------------------
 /*
@@ -295,17 +302,21 @@ void A1::draw()
 		glUniformMatrix4fv( M_uni, 1, GL_FALSE, value_ptr( W ) );
 		glBindVertexArray( m_cube_vao );
 
-		// Place 3 cubes in a stack
-		for (int i = 0; i < 3; i++) {
-			// Transform
-			W = glm::translate( W, vec3( 0, 1, 0 ) );
-			glUniformMatrix4fv( M_uni, 1, GL_FALSE, value_ptr( W ) );
-			// Color
-			glUniform3f( col_uni, 1 - 0.5 *i, 0 + 0.5*i, 1 );
-			//Draw
-			glDrawArrays( GL_TRIANGLES, 0, 3*2*6);
+		// For every value in cube_counts, draw that many cubes
+		for (int i = 0; i < DIM * DIM; i++) {
+			int x_coord = i % DIM;
+			int y_coord = i / DIM;
+			int count = cube_counts[i];
+			for (int j = 0; j < count; j++) {
+				W = glm::translate( W, vec3( x_coord, j, y_coord ) );
+				glUniformMatrix4fv( M_uni, 1, GL_FALSE, value_ptr( W ) );
+				glUniform3f( col_uni, 1 - 1.0 / count * j , 0 + 1.0/count*j, 1 );
+				glDrawArrays( GL_TRIANGLES, 0, 3*2*6);
+				// Undo the translate
+				W = glm::translate( W, vec3( -x_coord, -j, -y_coord ) );
+				glUniformMatrix4fv( M_uni, 1, GL_FALSE, value_ptr( W ) );
+			}
 		}
-
 
 		// Highlight the active square.
 	m_shader.disable();
@@ -410,6 +421,12 @@ bool A1::keyInputEvent(int key, int action, int mods) {
 		if (key == GLFW_KEY_R) {
 			resetGrid();
 		}
+		if (key == GLFW_KEY_EQUAL) {
+			increaseCurrentStackSize();
+		}
+		if (key == GLFW_KEY_MINUS) {
+			decreaseCurrentStackSize();
+		}
 	}
 
 	return eventHandled;
@@ -418,3 +435,12 @@ bool A1::keyInputEvent(int key, int action, int mods) {
 void A1::resetGrid() {
 	cout << "resetGrid() called." << endl;
 }
+
+void A1::increaseCurrentStackSize() {
+	cout << "increaseCurrentStackSize() called." << endl;
+}
+
+void A1::decreaseCurrentStackSize() {
+	cout << "decreaseCurrentStackSize() called." << endl;
+}
+
