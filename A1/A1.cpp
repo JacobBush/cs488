@@ -340,6 +340,10 @@ void A1::guiLogic()
 
 		ImGui::Text( "Framerate: %.1f FPS", ImGui::GetIO().Framerate );
 
+		if( ImGui::Button( "Extra Feature: Toggle Gradient Stacks" ) ) {
+			grad_stacks = !grad_stacks;
+		}
+
 	ImGui::End();
 
 	if( showTestWindow ) {
