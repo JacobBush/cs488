@@ -32,7 +32,7 @@ private:
 	void initCube();
 	void initMarker();
 	void resetColours();
-	void resetGrid();
+	void reset();
 
 	void increaseCurrentStackSize();
 	void decreaseCurrentStackSize();

@@ -19,7 +19,8 @@ static const float SCALE_FACTOR = 0.1f;
 // Constructor
 A1::A1()
 	: current_col( 0 ), active_square( 0 ), grad_stacks( false ),
-	prev_mouse_x_posn( 0 ), dragging( false ), rotation_amount( 0 )
+	prev_mouse_x_posn( 0 ), dragging( false ), rotation_amount( 0 ),
+	zoom_amount( 0 )
 {
 	for (int i = 0; i < 8; i++) {
 		fill(colour[i], colour[i] + 3, 0.0f);
@@ -27,10 +28,10 @@ A1::A1()
 
 	// Point (x,y) = cube_counts[x + y*DIM]
 	cube_counts = new int[DIM * DIM];
-	memset(cube_counts, 0, DIM * DIM);
+	memset(cube_counts, 0, sizeof(int) * DIM * DIM);
 
 	stack_colour = new int[DIM * DIM];
-	memset(stack_colour, -1, DIM * DIM);
+	memset(stack_colour, -1, sizeof(int) * DIM * DIM);
 }
 
 //----------------------------------------------------------------------------------------
@@ -312,8 +313,8 @@ void A1::guiLogic()
 			glfwSetWindowShouldClose(m_window, GL_TRUE);
 		}
 
-		if( ImGui::Button( "Reset Grid" ) ) {
-			resetGrid();
+		if( ImGui::Button( "Reset" ) ) {
+			reset();
 		}
 
 		// Eventually you'll create multiple colour widgets with
@@ -548,7 +549,7 @@ bool A1::keyInputEvent(int key, int action, int mods) {
 			eventHandled = true;
 		}
 		else if (key == GLFW_KEY_R) {
-			resetGrid();
+			reset();
 			eventHandled = true;
 		}
 		else if (key == GLFW_KEY_SPACE) {
@@ -592,8 +593,19 @@ bool A1::keyInputEvent(int key, int action, int mods) {
 	return eventHandled;
 }
 
-void A1::resetGrid() {
-	cout << "resetGrid() called." << endl;
+void A1::reset() {
+	memset(cube_counts, 0, sizeof(int) * DIM * DIM);
+	memset(stack_colour, -1, sizeof(int) * DIM * DIM);
+
+	current_col = 0;
+	active_square = 0;
+	grad_stacks = false;
+	prev_mouse_x_posn = 0;
+	dragging = false;
+	rotation_amount = 0;
+	zoom_amount = 0;
+
+	resetColours();
 }
 
 void A1::increaseCurrentStackSize() {
