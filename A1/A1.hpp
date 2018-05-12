@@ -31,7 +31,9 @@ private:
 	void initGrid();
 	void initCube();
 	void initMarker();
+	void initColours();
 	void resetGrid();
+
 	void increaseCurrentStackSize();
 	void decreaseCurrentStackSize();
 	void moveCurrentColUp();
@@ -69,7 +71,10 @@ private:
 	glm::mat4 proj;
 	glm::mat4 view;
 
-	float colour[3];
+	float colour[8][3];
 	int *cube_counts;
 	int current_col;
+	int active_square;
+
+	bool grad_stacks;
 };

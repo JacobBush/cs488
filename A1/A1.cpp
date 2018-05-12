@@ -16,16 +16,15 @@ static const size_t DIM = 16;
 //----------------------------------------------------------------------------------------
 // Constructor
 A1::A1()
-	: current_col( 0 )
+	: current_col( 0 ), active_square( 0 ), grad_stacks( false )
 {
-	colour[0] = 0.0f;
-	colour[1] = 0.0f;
-	colour[2] = 0.0f;
+	for (int i = 0; i < 8; i++) {
+		fill(colour[i], colour[i] + 3, 0.0f);
+	}
 
 	// Point (x,y) = cube_counts[x + y*DIM]
 	cube_counts = new int[DIM * DIM];
 	memset(cube_counts, 0, DIM * DIM);
-	cube_counts[DIM + 1] = 3;
 }
 
 //----------------------------------------------------------------------------------------
@@ -61,6 +60,8 @@ void A1::init()
 	initGrid();
 	initCube();
 	initMarker();
+
+	initColours();
 
 	// Set up initial view and projection matrices (need to do this here,
 	// since it depends on the GLFW window being set up correctly).
@@ -238,6 +239,41 @@ void A1::initMarker() {
 	CHECK_GL_ERRORS;
 }
 
+void A1::initColours() {
+	// Red
+	colour[0][0] = 1.0;
+	colour[0][1] = 0.0;
+	colour[0][2] = 0.0;
+	// Green
+	colour[1][0] = 0.0;
+	colour[1][1] = 1.0;
+	colour[1][2] = 0.0;
+	// Blue
+	colour[2][0] = 0.0;
+	colour[2][1] = 0.0;
+	colour[2][2] = 1.0;
+	// Yellow
+	colour[3][0] = 1.0;
+	colour[3][1] = 1.0;
+	colour[3][2] = 0.0;
+	// Magenta
+	colour[4][0] = 1.0;
+	colour[4][1] = 0.0;
+	colour[4][2] = 1.0;
+	// Cyan
+	colour[5][0] = 0.0;
+	colour[5][1] = 1.0;
+	colour[5][2] = 1.0;
+	// Orange
+	colour[6][0] = 1.0;
+	colour[6][1] = 0.5;
+	colour[6][2] = 0.0;
+	// Brown
+	colour[7][0] = 0.7;
+	colour[7][1] = 0.5;
+	colour[7][2] = 0.3;
+}
+
 //----------------------------------------------------------------------------------------
 /*
  * Called once per frame, before guiLogic().
@@ -282,13 +318,15 @@ void A1::guiLogic()
 		// Prefixing a widget name with "##" keeps it from being
 		// displayed.
 
-		ImGui::PushID( 0 );
-		ImGui::ColorEdit3( "##Colour", colour );
-		ImGui::SameLine();
-		if( ImGui::RadioButton( "##Col", &current_col, 0 ) ) {
-			// Select this colour.
+		for (int i = 0; i < 8; i++) {
+			ImGui::PushID( i );
+			ImGui::ColorEdit3( "##Colour", colour[i]);
+			ImGui::SameLine();
+			if( ImGui::RadioButton( "##Col", &current_col, i ) ) {
+				// Select this colour.
+			}
+			ImGui::PopID();
 		}
-		ImGui::PopID();
 
 /*
 		// For convenience, you can uncomment this to show ImGui's massive
@@ -345,7 +383,12 @@ void A1::draw()
 			for (int j = 0; j < count; j++) {
 				W = glm::translate( W, vec3( x_coord, j, y_coord ) );
 				glUniformMatrix4fv( M_uni, 1, GL_FALSE, value_ptr( W ) );
-				glUniform3f( col_uni, 1 - 1.0 / count * j , 0 + 1.0/count*j, 1 );
+				if (grad_stacks) {
+					glUniform3f( col_uni, 1 - 1.0 / count * j , 0 + 1.0/count*j, 1 );
+				} else {
+					float *c = colour[current_col];
+					glUniform3f( col_uni, c[0], c[1], c[2]);
+				}
 				glDrawArrays( GL_TRIANGLES, 0, 3*2*6);
 				// Undo the translate
 				W = glm::translate( W, vec3( -x_coord, -j, -y_coord ) );
@@ -359,12 +402,12 @@ void A1::draw()
 		glBindVertexArray( m_marker_vao );
 		glUniform3f( col_uni, 0, 0, 0 );
 		// Translate and draw
-		W = glm::translate( W, vec3( getXFromInt(current_col), 0, -getYFromInt(current_col) ) );
+		W = glm::translate( W, vec3( getXFromInt(active_square), 0, -getYFromInt(active_square) ) );
 		glUniformMatrix4fv( M_uni, 1, GL_FALSE, value_ptr( W ) );
 		glDrawArrays( GL_TRIANGLE_STRIP, 0, 4 );
-		if (cube_counts[current_col] != 0) {
+		if (cube_counts[active_square] != 0) {
 			// Draw on top of stack as well
-			W = glm::translate( W, vec3( 0, cube_counts[current_col], 0 ) );
+			W = glm::translate( W, vec3( 0, cube_counts[active_square], 0 ) );
 			glUniformMatrix4fv( M_uni, 1, GL_FALSE, value_ptr( W ) );
 			glDrawArrays( GL_TRIANGLE_STRIP, 0, 4 );
 		}
@@ -511,55 +554,55 @@ void A1::resetGrid() {
 }
 
 void A1::increaseCurrentStackSize() {
-	cube_counts[current_col]++;
+	cube_counts[active_square]++;
 }
 
 void A1::decreaseCurrentStackSize() {
-	cube_counts[current_col]--;
-	if (cube_counts[current_col] < 0) cube_counts[current_col] = 0;
+	cube_counts[active_square]--;
+	if (cube_counts[active_square] < 0) cube_counts[active_square] = 0;
 }
 
 void A1::moveCurrentColUp() {
-	if (getYFromInt(current_col) < DIM - 1) current_col += DIM;
+	if (getYFromInt(active_square) < DIM - 1) active_square += DIM;
 }
 
 void A1::moveCurrentColDown() {
-	if (getYFromInt(current_col) > 0) current_col -= DIM;
+	if (getYFromInt(active_square) > 0) active_square -= DIM;
 }
 
 void A1::moveCurrentColLeft() {
-	if (getXFromInt(current_col) > 0) current_col--;
+	if (getXFromInt(active_square) > 0) active_square--;
 }
 
 void A1::moveCurrentColRight() {
-	if (getXFromInt(current_col) < DIM - 1) current_col++;
+	if (getXFromInt(active_square) < DIM - 1) active_square++;
 }
 
 void A1::copyCurrentStackUp() {
-	int new_col = current_col + DIM;
+	int new_col = active_square + DIM;
 	if (getYFromInt(new_col) < DIM) {
-		cube_counts[new_col] = cube_counts[current_col];
+		cube_counts[new_col] = cube_counts[active_square];
 	}
 }
 
 void A1::copyCurrentStackDown() {
-	int new_col = current_col - DIM;
+	int new_col = active_square - DIM;
 	if (getYFromInt(new_col) >= 0) {
-		cube_counts[new_col] = cube_counts[current_col];
+		cube_counts[new_col] = cube_counts[active_square];
 	}
 }
 
 void A1::copyCurrentStackLeft() {
-	int new_col = current_col - 1;
+	int new_col = active_square - 1;
 	if (getXFromInt(new_col) >= 0) {
-		cube_counts[new_col] = cube_counts[current_col];
+		cube_counts[new_col] = cube_counts[active_square];
 	}
 }
 
 void A1::copyCurrentStackRight() {
-	int new_col = current_col + 1;
+	int new_col = active_square + 1;
 	if (getXFromInt(new_col) < DIM) {
-		cube_counts[new_col] = cube_counts[current_col];
+		cube_counts[new_col] = cube_counts[active_square];
 	}
 }
 
