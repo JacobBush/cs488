@@ -624,32 +624,32 @@ void A1::moveCurrentColRight() {
 }
 
 void A1::copyCurrentStackUp() {
-	int new_col = active_square + DIM;
-	if (getYFromInt(new_col) < DIM) {
+	if (getYFromInt(active_square) < DIM - 1) {
+		int new_col = active_square + DIM;
 		cube_counts[new_col] = cube_counts[active_square];
 		stack_colour[new_col] = stack_colour[active_square];
 	}
 }
 
 void A1::copyCurrentStackDown() {
-	int new_col = active_square - DIM;
-	if (getYFromInt(new_col) >= 0) {
+	if (getYFromInt(active_square) > 0) {
+		int new_col = active_square - DIM;
 		cube_counts[new_col] = cube_counts[active_square];
 		stack_colour[new_col] = stack_colour[active_square];
 	}
 }
 
 void A1::copyCurrentStackLeft() {
-	int new_col = active_square - 1;
-	if (getXFromInt(new_col) >= 0) {
+	if (getXFromInt(active_square) > 0) {
+		int new_col = active_square - 1;
 		cube_counts[new_col] = cube_counts[active_square];
 		stack_colour[new_col] = stack_colour[active_square];
 	}
 }
 
 void A1::copyCurrentStackRight() {
-	int new_col = active_square + 1;
-	if (getXFromInt(new_col) < DIM) {
+	if (getXFromInt(active_square) < DIM - 1) {
+		int new_col = active_square + 1;
 		cube_counts[new_col] = cube_counts[active_square];
 		stack_colour[new_col] = stack_colour[active_square];
 	}
