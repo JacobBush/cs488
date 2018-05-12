@@ -334,7 +334,7 @@ void A1::draw()
 		// Draw the cubes
 
 		// We will by default have the cube at (0,0)
-		W = glm::translate( W, vec3( 1, 0, DIM - 1 ) );
+		W = glm::translate( W, vec3( 0, 0, DIM ) );
 		glBindVertexArray( m_cube_vao );
 
 		// For every value in cube_counts, draw that many cubes
