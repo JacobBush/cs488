@@ -78,5 +78,9 @@ private:
 	int *stack_colour;
 	int active_square;
 
+	bool dragging;
+	int prev_mouse_x_posn;
+	int rotation_amount;
+
 	bool grad_stacks;
 };

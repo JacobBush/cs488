@@ -11,12 +11,16 @@
 using namespace glm;
 using namespace std;
 
+static const float PI = 3.14159265f;
+
 static const size_t DIM = 16;
+static const float ROTATION_SPEED = 0.0025;
 
 //----------------------------------------------------------------------------------------
 // Constructor
 A1::A1()
-	: current_col( 0 ), active_square( 0 ), grad_stacks( false )
+	: current_col( 0 ), active_square( 0 ), grad_stacks( false ),
+	prev_mouse_x_posn( 0 ), dragging( false ), rotation_amount( 0 )
 {
 	for (int i = 0; i < 8; i++) {
 		fill(colour[i], colour[i] + 3, 0.0f);
@@ -356,6 +360,7 @@ void A1::guiLogic()
 	}
 }
 
+
 //----------------------------------------------------------------------------------------
 /*
  * Called once per frame, after guiLogic().
@@ -365,6 +370,11 @@ void A1::draw()
 	// Create a global transformation for the model (centre it).
 	mat4 W;
 	W = glm::translate( W, vec3( -float(DIM)/2.0f, 0, -float(DIM)/2.0f ) );
+	// Rotate based on mouse events
+	static float translation_factor = float(DIM)/2.0f;
+	W = glm::translate(W, vec3( translation_factor, 0, translation_factor ));
+	W = glm::rotate( W, ROTATION_SPEED * rotation_amount, vec3(0,1,0) );
+	W = glm::translate(W, vec3( -translation_factor, 0, -translation_factor ));
 
 	m_shader.enable();
 		glEnable( GL_DEPTH_TEST );
@@ -464,6 +474,11 @@ bool A1::mouseMoveEvent(double xPos, double yPos)
 		// Probably need some instance variables to track the current
 		// rotation amount, and maybe the previous X position (so 
 		// that you can rotate relative to the *change* in X.
+		if (dragging) {
+			int current_mouse_x_posn = ImGui::GetMousePos().x;
+			rotation_amount += current_mouse_x_posn - prev_mouse_x_posn;
+			prev_mouse_x_posn = current_mouse_x_posn;
+		}
 	}
 
 	return eventHandled;
@@ -479,6 +494,12 @@ bool A1::mouseButtonInputEvent(int button, int actions, int mods) {
 	if (!ImGui::IsMouseHoveringAnyWindow()) {
 		// The user clicked in the window.  If it's the left
 		// mouse button, initiate a rotation.
+		if (button == GLFW_MOUSE_BUTTON_LEFT && actions == GLFW_PRESS) {
+			prev_mouse_x_posn = ImGui::GetMousePos().x;
+			dragging = true;
+		} else if (button == GLFW_MOUSE_BUTTON_LEFT && actions == GLFW_RELEASE) {
+			dragging = false;
+		}
 	}
 
 	return eventHandled;
@@ -520,34 +541,34 @@ bool A1::keyInputEvent(int key, int action, int mods) {
 		if (key == GLFW_KEY_Q) {
 			glfwSetWindowShouldClose(m_window, GL_TRUE);
 		}
-		if (key == GLFW_KEY_R) {
+		else if (key == GLFW_KEY_R) {
 			resetGrid();
 		}
-		if (key == GLFW_KEY_SPACE) {
+		else if (key == GLFW_KEY_SPACE) {
 			increaseCurrentStackSize();
 		}
-		if (key == GLFW_KEY_BACKSPACE) {
+		else if (key == GLFW_KEY_BACKSPACE) {
 			decreaseCurrentStackSize();
 		}
-		if (key == GLFW_KEY_UP) {
+		else if (key == GLFW_KEY_UP) {
 			if (mods & GLFW_MOD_SHIFT) {
 				copyCurrentStackUp();
 			}
 			moveCurrentColUp();
 		}
-		if (key == GLFW_KEY_DOWN) {
+		else if (key == GLFW_KEY_DOWN) {
 			if (mods & GLFW_MOD_SHIFT) {
 				copyCurrentStackDown();
 			}
 			moveCurrentColDown();
 		}
-		if (key == GLFW_KEY_LEFT) {
+		else if (key == GLFW_KEY_LEFT) {
 			if (mods & GLFW_MOD_SHIFT) {
 				copyCurrentStackLeft();
 			}
 			moveCurrentColLeft();
 		}
-		if (key == GLFW_KEY_RIGHT) {
+		else if (key == GLFW_KEY_RIGHT) {
 			if (mods & GLFW_MOD_SHIFT) {
 				copyCurrentStackRight();
 			}
