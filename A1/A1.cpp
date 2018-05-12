@@ -208,11 +208,10 @@ void A1::initMarker() {
 	size_t sz = 3*4;
 
 	float verts[sz] = {
-		// Front
 		0,0,0,
 		1,0,0,
-		0,0,1,
-		1,0,1
+		0,0,-1,
+		1,0,-1
 	};
 
 	// Create the vertex array to record buffer assignments.
@@ -310,6 +309,14 @@ void A1::guiLogic()
 	}
 }
 
+int getXFromInt(int z) {
+	return z % DIM;
+}
+
+int getYFromInt(int z) {
+	return -(z / DIM);
+}
+
 //----------------------------------------------------------------------------------------
 /*
  * Called once per frame, after guiLogic().
@@ -336,13 +343,12 @@ void A1::draw()
 
 		// We will by default have the cube at (0,0)
 		W = glm::translate( W, vec3( 1, 0, DIM - 1 ) );
-		glUniformMatrix4fv( M_uni, 1, GL_FALSE, value_ptr( W ) );
 		glBindVertexArray( m_cube_vao );
 
 		// For every value in cube_counts, draw that many cubes
 		for (int i = 0; i < DIM * DIM; i++) {
-			int x_coord = i % DIM;
-			int y_coord = -(i / DIM);
+			int x_coord = getXFromInt(i);
+			int y_coord = getYFromInt(i);
 			int count = cube_counts[i];
 			for (int j = 0; j < count; j++) {
 				W = glm::translate( W, vec3( x_coord, j, y_coord ) );
@@ -354,13 +360,22 @@ void A1::draw()
 			}
 		}
 
-		// Highlight the active square.
+		// Highlight the active square:
+		// Depth test so goes through cubes
 		glDisable( GL_DEPTH_TEST );
+		// Bind marker and color
 		glBindVertexArray( m_marker_vao );
-		W = glm::translate( W, vec3( current_col % DIM, 0, -(current_col / DIM) ) );
+		glUniform3f( col_uni, 0, 0, 0 );
+		// Translate and draw
+		W = glm::translate( W, vec3( getXFromInt(current_col), 0, getYFromInt(current_col) ) );
 		glUniformMatrix4fv( M_uni, 1, GL_FALSE, value_ptr( W ) );
-		glUniform3f( col_uni, 1, 0, 0 );
-		glDrawArrays( GL_TRIANGLE_STRIP, 0, 3*4 );
+		glDrawArrays( GL_TRIANGLE_STRIP, 0, 4 );
+		if (cube_counts[current_col] != 0) {
+			// Draw on top of stack as well
+			W = glm::translate( W, vec3( 0, cube_counts[current_col], 0 ) );
+			glUniformMatrix4fv( M_uni, 1, GL_FALSE, value_ptr( W ) );
+			glDrawArrays( GL_TRIANGLE_STRIP, 0, 4 );
+		}
 
 	m_shader.disable();
 
