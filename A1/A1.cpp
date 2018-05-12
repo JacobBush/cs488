@@ -478,15 +478,27 @@ bool A1::keyInputEvent(int key, int action, int mods) {
 			decreaseCurrentStackSize();
 		}
 		if (key == GLFW_KEY_UP) {
+			if (mods & GLFW_MOD_SHIFT) {
+				copyCurrentStackUp();
+			}
 			moveCurrentColUp();
 		}
 		if (key == GLFW_KEY_DOWN) {
+			if (mods & GLFW_MOD_SHIFT) {
+				copyCurrentStackDown();
+			}
 			moveCurrentColDown();
 		}
 		if (key == GLFW_KEY_LEFT) {
+			if (mods & GLFW_MOD_SHIFT) {
+				copyCurrentStackLeft();
+			}
 			moveCurrentColLeft();
 		}
 		if (key == GLFW_KEY_RIGHT) {
+			if (mods & GLFW_MOD_SHIFT) {
+				copyCurrentStackRight();
+			}
 			moveCurrentColRight();
 		}
 	}
@@ -521,6 +533,34 @@ void A1::moveCurrentColLeft() {
 
 void A1::moveCurrentColRight() {
 	if (getXFromInt(current_col) < DIM - 1) current_col++;
+}
+
+void A1::copyCurrentStackUp() {
+	int new_col = current_col + DIM;
+	if (getYFromInt(new_col) < DIM) {
+		cube_counts[new_col] = cube_counts[current_col];
+	}
+}
+
+void A1::copyCurrentStackDown() {
+	int new_col = current_col - DIM;
+	if (getYFromInt(new_col) >= 0) {
+		cube_counts[new_col] = cube_counts[current_col];
+	}
+}
+
+void A1::copyCurrentStackLeft() {
+	int new_col = current_col - 1;
+	if (getXFromInt(new_col) >= 0) {
+		cube_counts[new_col] = cube_counts[current_col];
+	}
+}
+
+void A1::copyCurrentStackRight() {
+	int new_col = current_col + 1;
+	if (getXFromInt(new_col) < DIM) {
+		cube_counts[new_col] = cube_counts[current_col];
+	}
 }
 
 int A1::getXFromInt(int n) {

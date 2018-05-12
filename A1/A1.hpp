@@ -38,6 +38,10 @@ private:
 	void moveCurrentColDown();
 	void moveCurrentColLeft();
 	void moveCurrentColRight();
+	void copyCurrentStackUp();
+	void copyCurrentStackDown();
+	void copyCurrentStackLeft();
+	void copyCurrentStackRight();
 
 	int getXFromInt(int n);
 	int getYFromInt(int n);
