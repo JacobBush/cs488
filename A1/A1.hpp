@@ -34,6 +34,13 @@ private:
 	void resetGrid();
 	void increaseCurrentStackSize();
 	void decreaseCurrentStackSize();
+	void moveCurrentColUp();
+	void moveCurrentColDown();
+	void moveCurrentColLeft();
+	void moveCurrentColRight();
+
+	int getXFromInt(int n);
+	int getYFromInt(int n);
 
 	// Fields related to the shader and uniforms.
 	ShaderProgram m_shader;

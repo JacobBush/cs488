@@ -309,14 +309,6 @@ void A1::guiLogic()
 	}
 }
 
-int getXFromInt(int z) {
-	return z % DIM;
-}
-
-int getYFromInt(int z) {
-	return -(z / DIM);
-}
-
 //----------------------------------------------------------------------------------------
 /*
  * Called once per frame, after guiLogic().
@@ -348,7 +340,7 @@ void A1::draw()
 		// For every value in cube_counts, draw that many cubes
 		for (int i = 0; i < DIM * DIM; i++) {
 			int x_coord = getXFromInt(i);
-			int y_coord = getYFromInt(i);
+			int y_coord = -getYFromInt(i);
 			int count = cube_counts[i];
 			for (int j = 0; j < count; j++) {
 				W = glm::translate( W, vec3( x_coord, j, y_coord ) );
@@ -367,7 +359,7 @@ void A1::draw()
 		glBindVertexArray( m_marker_vao );
 		glUniform3f( col_uni, 0, 0, 0 );
 		// Translate and draw
-		W = glm::translate( W, vec3( getXFromInt(current_col), 0, getYFromInt(current_col) ) );
+		W = glm::translate( W, vec3( getXFromInt(current_col), 0, -getYFromInt(current_col) ) );
 		glUniformMatrix4fv( M_uni, 1, GL_FALSE, value_ptr( W ) );
 		glDrawArrays( GL_TRIANGLE_STRIP, 0, 4 );
 		if (cube_counts[current_col] != 0) {
@@ -485,6 +477,18 @@ bool A1::keyInputEvent(int key, int action, int mods) {
 		if (key == GLFW_KEY_BACKSPACE) {
 			decreaseCurrentStackSize();
 		}
+		if (key == GLFW_KEY_UP) {
+			moveCurrentColUp();
+		}
+		if (key == GLFW_KEY_DOWN) {
+			moveCurrentColDown();
+		}
+		if (key == GLFW_KEY_LEFT) {
+			moveCurrentColLeft();
+		}
+		if (key == GLFW_KEY_RIGHT) {
+			moveCurrentColRight();
+		}
 	}
 
 	return eventHandled;
@@ -503,3 +507,26 @@ void A1::decreaseCurrentStackSize() {
 	if (cube_counts[current_col] < 0) cube_counts[current_col] = 0;
 }
 
+void A1::moveCurrentColUp() {
+	if (getYFromInt(current_col) < DIM - 1) current_col += DIM;
+}
+
+void A1::moveCurrentColDown() {
+	if (getYFromInt(current_col) > 0) current_col -= DIM;
+}
+
+void A1::moveCurrentColLeft() {
+	if (getXFromInt(current_col) > 0) current_col--;
+}
+
+void A1::moveCurrentColRight() {
+	if (getXFromInt(current_col) < DIM - 1) current_col++;
+}
+
+int A1::getXFromInt(int n) {
+	return n % DIM;
+}
+
+int A1::getYFromInt(int n) {
+	return n / DIM;
+}
