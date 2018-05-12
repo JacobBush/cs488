@@ -31,7 +31,7 @@ private:
 	void initGrid();
 	void initCube();
 	void initMarker();
-	void initColours();
+	void resetColours();
 	void resetGrid();
 
 	void increaseCurrentStackSize();
@@ -81,6 +81,8 @@ private:
 	bool dragging;
 	int prev_mouse_x_posn;
 	int rotation_amount;
+
+	double zoom_amount;
 
 	bool grad_stacks;
 };

@@ -11,10 +11,9 @@
 using namespace glm;
 using namespace std;
 
-static const float PI = 3.14159265f;
-
 static const size_t DIM = 16;
-static const float ROTATION_SPEED = 0.0025;
+static const float ROTATION_SPEED = 0.0025f;
+static const float SCALE_FACTOR = 0.1f;
 
 //----------------------------------------------------------------------------------------
 // Constructor
@@ -69,7 +68,7 @@ void A1::init()
 	initCube();
 	initMarker();
 
-	initColours();
+	resetColours();
 
 	// Set up initial view and projection matrices (need to do this here,
 	// since it depends on the GLFW window being set up correctly).
@@ -247,7 +246,7 @@ void A1::initMarker() {
 	CHECK_GL_ERRORS;
 }
 
-void A1::initColours() {
+void A1::resetColours() {
 	// Red
 	colour[0][0] = 1.0;
 	colour[0][1] = 0.0;
@@ -370,9 +369,11 @@ void A1::draw()
 	// Create a global transformation for the model (centre it).
 	mat4 W;
 	W = glm::translate( W, vec3( -float(DIM)/2.0f, 0, -float(DIM)/2.0f ) );
-	// Rotate based on mouse events
+	// Rotate / Scale based on mouse events
 	static float translation_factor = float(DIM)/2.0f;
 	W = glm::translate(W, vec3( translation_factor, 0, translation_factor ));
+	float z = 1 + SCALE_FACTOR * float(zoom_amount);
+	W = glm::scale( W, vec3( z, z, z ) );
 	W = glm::rotate( W, ROTATION_SPEED * rotation_amount, vec3(0,1,0) );
 	W = glm::translate(W, vec3( -translation_factor, 0, -translation_factor ));
 
@@ -478,6 +479,7 @@ bool A1::mouseMoveEvent(double xPos, double yPos)
 			int current_mouse_x_posn = ImGui::GetMousePos().x;
 			rotation_amount += current_mouse_x_posn - prev_mouse_x_posn;
 			prev_mouse_x_posn = current_mouse_x_posn;
+			eventHandled = true;
 		}
 	}
 
@@ -497,8 +499,10 @@ bool A1::mouseButtonInputEvent(int button, int actions, int mods) {
 		if (button == GLFW_MOUSE_BUTTON_LEFT && actions == GLFW_PRESS) {
 			prev_mouse_x_posn = ImGui::GetMousePos().x;
 			dragging = true;
+			eventHandled = true;
 		} else if (button == GLFW_MOUSE_BUTTON_LEFT && actions == GLFW_RELEASE) {
 			dragging = false;
+			eventHandled = true;
 		}
 	}
 
@@ -511,9 +515,10 @@ bool A1::mouseButtonInputEvent(int button, int actions, int mods) {
  */
 bool A1::mouseScrollEvent(double xOffSet, double yOffSet) {
 	bool eventHandled(false);
-
-	// Zoom in or out.
-
+	zoom_amount += yOffSet;
+	if (zoom_amount >= 3.0/SCALE_FACTOR) zoom_amount = 3.0/SCALE_FACTOR - 1;
+	if (zoom_amount <= -1.0/SCALE_FACTOR) zoom_amount = -1.0/SCALE_FACTOR + 1;
+	eventHandled = true;
 	return eventHandled;
 }
 
@@ -540,39 +545,47 @@ bool A1::keyInputEvent(int key, int action, int mods) {
 	if( action == GLFW_PRESS ) {
 		if (key == GLFW_KEY_Q) {
 			glfwSetWindowShouldClose(m_window, GL_TRUE);
+			eventHandled = true;
 		}
 		else if (key == GLFW_KEY_R) {
 			resetGrid();
+			eventHandled = true;
 		}
 		else if (key == GLFW_KEY_SPACE) {
 			increaseCurrentStackSize();
+			eventHandled = true;
 		}
 		else if (key == GLFW_KEY_BACKSPACE) {
 			decreaseCurrentStackSize();
+			eventHandled = true;
 		}
 		else if (key == GLFW_KEY_UP) {
 			if (mods & GLFW_MOD_SHIFT) {
 				copyCurrentStackUp();
 			}
 			moveCurrentColUp();
+			eventHandled = true;
 		}
 		else if (key == GLFW_KEY_DOWN) {
 			if (mods & GLFW_MOD_SHIFT) {
 				copyCurrentStackDown();
 			}
 			moveCurrentColDown();
+			eventHandled = true;
 		}
 		else if (key == GLFW_KEY_LEFT) {
 			if (mods & GLFW_MOD_SHIFT) {
 				copyCurrentStackLeft();
 			}
 			moveCurrentColLeft();
+			eventHandled = true;
 		}
 		else if (key == GLFW_KEY_RIGHT) {
 			if (mods & GLFW_MOD_SHIFT) {
 				copyCurrentStackRight();
 			}
 			moveCurrentColRight();
+			eventHandled = true;
 		}
 	}
 
