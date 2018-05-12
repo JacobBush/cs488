@@ -72,8 +72,10 @@ private:
 	glm::mat4 view;
 
 	float colour[8][3];
-	int *cube_counts;
 	int current_col;
+
+	int *cube_counts;
+	int *stack_colour;
 	int active_square;
 
 	bool grad_stacks;

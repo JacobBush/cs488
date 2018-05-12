@@ -25,6 +25,9 @@ A1::A1()
 	// Point (x,y) = cube_counts[x + y*DIM]
 	cube_counts = new int[DIM * DIM];
 	memset(cube_counts, 0, DIM * DIM);
+
+	stack_colour = new int[DIM * DIM];
+	memset(stack_colour, -1, DIM * DIM);
 }
 
 //----------------------------------------------------------------------------------------
@@ -32,6 +35,7 @@ A1::A1()
 A1::~A1()
 {
 	delete [] cube_counts;
+	delete [] stack_colour;
 }
 
 //----------------------------------------------------------------------------------------
@@ -324,6 +328,7 @@ void A1::guiLogic()
 			ImGui::SameLine();
 			if( ImGui::RadioButton( "##Col", &current_col, i ) ) {
 				// Select this colour.
+				stack_colour[active_square] = current_col;
 			}
 			ImGui::PopID();
 		}
@@ -390,7 +395,7 @@ void A1::draw()
 				if (grad_stacks) {
 					glUniform3f( col_uni, 1 - 1.0 / count * j , 0 + 1.0/count*j, 1 );
 				} else {
-					float *c = colour[current_col];
+					float *c = colour[stack_colour[i]];
 					glUniform3f( col_uni, c[0], c[1], c[2]);
 				}
 				glDrawArrays( GL_TRIANGLES, 0, 3*2*6);
@@ -558,12 +563,14 @@ void A1::resetGrid() {
 }
 
 void A1::increaseCurrentStackSize() {
+	if (cube_counts[active_square] == 0) stack_colour[active_square] = current_col;
 	cube_counts[active_square]++;
 }
 
 void A1::decreaseCurrentStackSize() {
 	cube_counts[active_square]--;
 	if (cube_counts[active_square] < 0) cube_counts[active_square] = 0;
+	if (cube_counts[active_square] == 0) stack_colour[active_square] = -1;
 }
 
 void A1::moveCurrentColUp() {
@@ -586,6 +593,7 @@ void A1::copyCurrentStackUp() {
 	int new_col = active_square + DIM;
 	if (getYFromInt(new_col) < DIM) {
 		cube_counts[new_col] = cube_counts[active_square];
+		stack_colour[new_col] = stack_colour[active_square];
 	}
 }
 
@@ -593,6 +601,7 @@ void A1::copyCurrentStackDown() {
 	int new_col = active_square - DIM;
 	if (getYFromInt(new_col) >= 0) {
 		cube_counts[new_col] = cube_counts[active_square];
+		stack_colour[new_col] = stack_colour[active_square];
 	}
 }
 
@@ -600,6 +609,7 @@ void A1::copyCurrentStackLeft() {
 	int new_col = active_square - 1;
 	if (getXFromInt(new_col) >= 0) {
 		cube_counts[new_col] = cube_counts[active_square];
+		stack_colour[new_col] = stack_colour[active_square];
 	}
 }
 
@@ -607,6 +617,7 @@ void A1::copyCurrentStackRight() {
 	int new_col = active_square + 1;
 	if (getXFromInt(new_col) < DIM) {
 		cube_counts[new_col] = cube_counts[active_square];
+		stack_colour[new_col] = stack_colour[active_square];
 	}
 }
 
