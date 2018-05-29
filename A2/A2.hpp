@@ -65,6 +65,8 @@ protected:
 	void setViewMatrix();
 	void setPerspectiveMatrix();
 
+	void setViewport();
+
 	void initLineData();
 
 	void setLineColour(const glm::vec3 & colour);
@@ -99,6 +101,9 @@ protected:
 
 	// 3 bits for mouse buttons right|middle|left
 	char dragging;
-	int prev_mouse_x_posn;
-	int rotation_amount;
+	glm::vec2 prev_mouse_posn;
+	glm::vec2 mouse_movement;
+
+	glm::vec2 viewportPosn1;
+	glm::vec2 viewportPosn2;
 };
