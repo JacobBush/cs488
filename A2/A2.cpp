@@ -232,6 +232,38 @@ void A2::setModelMatrix() {
 
 //
 void A2::setViewMatrix() {
+	const float ROTATION_SPEED = 0.0025f;
+	const float TRANSLATION_SPEED = 0.0025f;
+
+	if (interaction_mode == "Rotate View") {
+		if ((dragging >> 0) & 1U) {
+			// dragging by left
+			V = rotationMatrix(0, rotation_amount * ROTATION_SPEED) * V;
+		}
+		if ((dragging >> 1) & 1U) {
+			// dragging by middle
+			V = rotationMatrix(1, rotation_amount * ROTATION_SPEED) * V;
+		}
+		if ((dragging >> 2) & 1U) {
+			// dragging by right
+			V = rotationMatrix(2, rotation_amount * ROTATION_SPEED) * V;
+		}
+		rotation_amount = 0;
+	} if (interaction_mode == "Translate View") {
+		if ((dragging >> 0) & 1U) {
+			// dragging by left
+			V *= translationMatrix(rotation_amount * TRANSLATION_SPEED, 0, 0);
+		}
+		if ((dragging >> 1) & 1U) {
+			// dragging by middle
+			V *= translationMatrix(0, rotation_amount * TRANSLATION_SPEED, 0);
+		}
+		if ((dragging >> 2) & 1U) {
+			// dragging by right
+			V *= translationMatrix(0, 0, rotation_amount * TRANSLATION_SPEED);
+		}
+		rotation_amount = 0;
+	}
 }
 
 //----------------------------------------------------------------------------------------
@@ -507,6 +539,15 @@ void A2::guiLogic()
 		
 		ImGui::Separator();
 
+		if( ImGui::Button( "Rotate View Mode" ) ) {
+			interaction_mode = "Rotate View";
+		}
+		if( ImGui::Button( "Translate View Mode" ) ) {
+			interaction_mode = "Translate View";
+		}
+		if( ImGui::Button( "Perspective Mode" ) ) {
+			interaction_mode = "Perspective";
+		}
 		if( ImGui::Button( "Rotate Model Mode" ) ) {
 			interaction_mode = "Rotate Model";
 		}
@@ -515,9 +556,6 @@ void A2::guiLogic()
 		}
 		if( ImGui::Button( "Scale Model Mode" ) ) {
 			interaction_mode = "Scale Model";
-		}
-		if( ImGui::Button( "Perspective Mode" ) ) {
-			interaction_mode = "Perspective";
 		}
 
 		ImGui::Separator();
@@ -728,6 +766,12 @@ bool A2::keyInputEvent (
 			eventHandled = true;
 		} else if (key == GLFW_KEY_P) {
 			interaction_mode = "Perspective";
+			eventHandled = true;
+		} else if (key == GLFW_KEY_N) {
+			interaction_mode = "Translate View";
+			eventHandled = true;
+		} else if (key == GLFW_KEY_O) {
+			interaction_mode = "Rotate View";
 			eventHandled = true;
 		}
 	}
