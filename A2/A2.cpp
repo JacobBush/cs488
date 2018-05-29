@@ -216,15 +216,15 @@ void A2::setModelMatrix() {
 	} else if (interaction_mode == "Translate Model") {
 		if ((dragging >> 0) & 1U) {
 			// dragging by left
-			M *= translationMatrix(rotation_amount * TRANSLATION_SPEED, 0, 0);
+			M *= translationMatrix(-rotation_amount * TRANSLATION_SPEED, 0, 0);
 		}
 		if ((dragging >> 1) & 1U) {
 			// dragging by middle
-			M *= translationMatrix(0, rotation_amount * TRANSLATION_SPEED, 0);
+			M *= translationMatrix(0, -rotation_amount * TRANSLATION_SPEED, 0);
 		}
 		if ((dragging >> 2) & 1U) {
 			// dragging by right
-			M *= translationMatrix(0, 0, rotation_amount * TRANSLATION_SPEED);
+			M *= translationMatrix(0, 0, -rotation_amount * TRANSLATION_SPEED);
 		}
 		rotation_amount = 0;
 	}
@@ -415,16 +415,16 @@ void A2::appLogic()
 
 	vec4 model_gnomon[4] = {
 		vec4(0.0f,0.0f,0.0f,1.0f),
-		vec4(-2.0f, 0.0f, 0.0f, 1.0f),
-		vec4(0.0f, -2.0f, 0.0f, 1.0f),
-		vec4(0.0f, 0.0f, -2.0f, 1.0f)
+		vec4(-1.0f, 0.0f, 0.0f, 1.0f),
+		vec4(0.0f, -1.0f, 0.0f, 1.0f),
+		vec4(0.0f, 0.0f, -1.0f, 1.0f)
 	};
 
 	vec4 world_gnomon[4] = {
 		vec4(0.0f,0.0f,0.0f,1.0f),
-		vec4(-2.0f, 0.0f, 0.0f, 1.0f),
-		vec4(0.0f, -2.0f, 0.0f, 1.0f),
-		vec4(0.0f, 0.0f, -2.0f, 1.0f)
+		vec4(-1.0f, 0.0f, 0.0f, 1.0f),
+		vec4(0.0f, -1.0f, 0.0f, 1.0f),
+		vec4(0.0f, 0.0f, -1.0f, 1.0f)
 	};
 
 	setModelMatrix();
