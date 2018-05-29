@@ -11,6 +11,9 @@ using namespace std;
 #include <glm/gtx/io.hpp>
 using namespace glm;
 
+const float PI = 3.14159265359f;
+const float DEGREES_TO_RADIANS = PI/180;
+
 //----------------------------------------------------------------------------------------
 // Constructor
 VertexData::VertexData()
@@ -27,7 +30,7 @@ VertexData::VertexData()
 A2::A2()
 	: m_currentLineColour(vec3(0.0f))
 {
-
+	reset();
 }
 
 //----------------------------------------------------------------------------------------
@@ -55,6 +58,212 @@ void A2::init()
 	generateVertexBuffers();
 
 	mapVboDataToVertexAttributeLocation();
+}
+
+//
+void A2::reset() {
+	theta = 30.0f * DEGREES_TO_RADIANS;
+	aspect = 1.0f;
+	near = 1.0f;
+	far = 10.0f;
+	interaction_mode = "Rotate Model";
+	prev_mouse_x_posn = 0.0f;
+	dragging = 0;
+	rotation_amount = 0.0f;
+
+	initPerspectiveMatrix();
+	initViewMatrix();
+	initModelMatrix();
+}
+
+//
+mat4 A2::translationMatrix(float dx, float dy, float dz) {
+	return mat4(
+		vec4(1,0,0,0),
+		vec4(0,1,0,0),
+		vec4(0,0,1,0),
+		vec4(dx,dy,dz,1)
+	);
+}
+
+mat4 A2::scaleMatrix(float sx, float sy, float sz) {
+	return mat4(
+		vec4(sx,0,0,0),
+		vec4(0,sy,0,0),
+		vec4(0,0,sz,0),
+		vec4(0,0,0,1)
+	);
+}
+
+// axis: 0=x, 1=y, 2=z
+mat4 A2::rotationMatrix(int axis, float theta) {
+	switch(axis) {
+		case 0:
+			return mat4(
+				vec4(1,0,0,0),
+				vec4(0,cos(theta), sin(theta), 0),
+				vec4(0, -sin(theta), cos(theta), 0),
+				vec4(0,0,0,1)
+			);
+		case 1:
+			return mat4(
+				vec4(cos(theta),0,-sin(theta),0),
+				vec4(0, 1, 0, 0),
+				vec4(sin(theta), 0, cos(theta), 0),
+				vec4(0,0,0,1)
+			);
+		case 2:
+			return mat4(
+				vec4(cos(theta), sin(theta), 0, 0),
+				vec4(-sin(theta), cos(theta), 0, 0),
+				vec4(0,0,1,0),
+				vec4(0,0,0,1)
+			);
+		default:
+			throw invalid_argument( "axis must be in {0,1,2}" );
+	}
+}
+
+//
+void A2::initPerspectiveMatrix() {
+	P = mat4(
+		vec4(1/(tan(theta/2)*aspect),0,0,0),
+		vec4(0, 1/tan(theta/2), 0, 0),
+		vec4(0,0,-(far + near)/(far-near), -1),
+		vec4(0,0,(-2*far*near)/(far-near),0)
+	);
+}
+
+//
+void A2::initModelMatrix() {
+	M = mat4();
+}
+
+//
+void A2::initViewMatrix() {
+	V = translationMatrix(0.0f,0.0f,10.0f);
+}
+
+//
+void A2::setPerspectiveMatrix() {
+	const float FOV_SCALING_FACTOR = 0.0025f;
+	const float PLANE_TRANSLATE_FACTOR = 0.0025f;
+	if (interaction_mode == "Perspective") {
+		if ((dragging >> 0) & 1U) {
+			// dragging by left
+			theta += rotation_amount * FOV_SCALING_FACTOR;
+			if (theta < 5.0f * DEGREES_TO_RADIANS) {
+				theta = 5.0f * DEGREES_TO_RADIANS;
+			}
+			if (theta > 160.0f * DEGREES_TO_RADIANS) {
+				theta = 160.0f * DEGREES_TO_RADIANS;
+			}
+		}
+		if ((dragging >> 1) & 1U) {
+			// dragging by middle
+			// From Piazza - don't need to restrict
+			near += rotation_amount * PLANE_TRANSLATE_FACTOR;
+		}
+		if ((dragging >> 2) & 1U) {
+			// dragging by right
+			// From Piazza - don't need to restrict
+			far += rotation_amount * PLANE_TRANSLATE_FACTOR;
+		}
+		rotation_amount = 0;
+	}
+	P = mat4(
+		vec4(1/(tan(theta/2)*aspect),0,0,0),
+		vec4(0, 1/tan(theta/2), 0, 0),
+		vec4(0,0,-(far + near)/(far-near), -1),
+		vec4(0,0,(-2*far*near)/(far-near),0)
+	);
+}
+
+//
+void A2::setModelMatrix() {
+	const float ROTATION_SPEED = 0.0025f;
+	const float TRANSLATION_SPEED = 0.0025f;
+	const float SCALING_SPEED = 0.0025f;
+	// Will update model matrix to current
+	if (interaction_mode == "Rotate Model") {
+		if ((dragging >> 0) & 1U) {
+			// dragging by left
+			M *= rotationMatrix(0, rotation_amount * ROTATION_SPEED);
+		}
+		if ((dragging >> 1) & 1U) {
+			// dragging by middle
+			M *= rotationMatrix(1, rotation_amount * ROTATION_SPEED);
+		}
+		if ((dragging >> 2) & 1U) {
+			// dragging by right
+			M *= rotationMatrix(2, rotation_amount * ROTATION_SPEED);
+		}
+		rotation_amount = 0;
+	} else if (interaction_mode == "Scale Model") {
+		if ((dragging >> 0) & 1U) {
+			// dragging by left
+			M *= scaleMatrix(1 + rotation_amount * SCALING_SPEED, 1, 1);
+		}
+		if ((dragging >> 1) & 1U) {
+			// dragging by middle
+			M *= scaleMatrix(1, 1 + rotation_amount * SCALING_SPEED, 1);
+		}
+		if ((dragging >> 2) & 1U) {
+			// dragging by right
+			M *= scaleMatrix(1, 1, 1 + rotation_amount * SCALING_SPEED);
+		}
+		rotation_amount = 0;
+	} else if (interaction_mode == "Translate Model") {
+		if ((dragging >> 0) & 1U) {
+			// dragging by left
+			M *= translationMatrix(rotation_amount * TRANSLATION_SPEED, 0, 0);
+		}
+		if ((dragging >> 1) & 1U) {
+			// dragging by middle
+			M *= translationMatrix(0, rotation_amount * TRANSLATION_SPEED, 0);
+		}
+		if ((dragging >> 2) & 1U) {
+			// dragging by right
+			M *= translationMatrix(0, 0, rotation_amount * TRANSLATION_SPEED);
+		}
+		rotation_amount = 0;
+	}
+}
+
+//
+void A2::setViewMatrix() {
+	const float ROTATION_SPEED = 0.0025f;
+	const float TRANSLATION_SPEED = 0.0025f;
+
+	if (interaction_mode == "Rotate View") {
+		if ((dragging >> 0) & 1U) {
+			// dragging by left
+			V = rotationMatrix(0, rotation_amount * ROTATION_SPEED) * V;
+		}
+		if ((dragging >> 1) & 1U) {
+			// dragging by middle
+			V = rotationMatrix(1, rotation_amount * ROTATION_SPEED) * V;
+		}
+		if ((dragging >> 2) & 1U) {
+			// dragging by right
+			V = rotationMatrix(2, rotation_amount * ROTATION_SPEED) * V;
+		}
+		rotation_amount = 0;
+	} if (interaction_mode == "Translate View") {
+		if ((dragging >> 0) & 1U) {
+			// dragging by left
+			V *= translationMatrix(rotation_amount * TRANSLATION_SPEED, 0, 0);
+		}
+		if ((dragging >> 1) & 1U) {
+			// dragging by middle
+			V *= translationMatrix(0, rotation_amount * TRANSLATION_SPEED, 0);
+		}
+		if ((dragging >> 2) & 1U) {
+			// dragging by right
+			V *= translationMatrix(0, 0, rotation_amount * TRANSLATION_SPEED);
+		}
+		rotation_amount = 0;
+	}
 }
 
 //----------------------------------------------------------------------------------------
@@ -178,6 +387,10 @@ void A2::drawLine(
 	m_vertexData.numVertices += 2;
 }
 
+vec2 vec4to2(vec4 vec) {
+	return vec2(vec[0], vec[1]);
+}
+
 //----------------------------------------------------------------------------------------
 /*
  * Called once per frame, before guiLogic().
@@ -189,7 +402,93 @@ void A2::appLogic()
 	// Call at the beginning of frame, before drawing lines:
 	initLineData();
 
+	vec4 cube[8] = {
+		vec4(1.0f,1.0f,1.0f,1.0f),
+		vec4(1.0f,1.0f,-1.0f,1.0f),
+		vec4(1.0f,-1.0f,1.0f,1.0f),
+		vec4(-1.0f,1.0f,1.0f,1.0f),
+		vec4(1.0f,-1.0f,-1.0f,1.0f),
+		vec4(-1.0f,1.0f,-1.0f,1.0f),
+		vec4(-1.0f,-1.0f,1.0f,1.0f),
+		vec4(-1.0f,-1.0f,-1.0f,1.0f)
+	};
+
+	vec4 model_gnomon[4] = {
+		vec4(0.0f,0.0f,0.0f,1.0f),
+		vec4(-2.0f, 0.0f, 0.0f, 1.0f),
+		vec4(0.0f, -2.0f, 0.0f, 1.0f),
+		vec4(0.0f, 0.0f, -2.0f, 1.0f)
+	};
+
+	vec4 world_gnomon[4] = {
+		vec4(0.0f,0.0f,0.0f,1.0f),
+		vec4(-2.0f, 0.0f, 0.0f, 1.0f),
+		vec4(0.0f, -2.0f, 0.0f, 1.0f),
+		vec4(0.0f, 0.0f, -2.0f, 1.0f)
+	};
+
+	setModelMatrix();
+	setViewMatrix();
+	setPerspectiveMatrix();
+
+	// transform cube
+	for (int i = 0; i < 8; i++) {
+		cube[i] = P * V * M * cube[i];
+		cube[i] /= cube[i][3];
+	}
+
+	// transform model gnomon
+	for (int i = 0; i < 4; i++) {
+		model_gnomon[i] = P * V * M * model_gnomon[i];
+		model_gnomon[i] /= model_gnomon[i][3];
+
+		world_gnomon[i] = P * V * world_gnomon[i];
+		world_gnomon[i] /= world_gnomon[i][3];
+	}
+
+//	cout << "P = " << P << endl;
+//	cout << "V = " << V << endl;
+//	cout << "M = " << M << endl;
+/*
+	for (int i = 0; i < 8; i++) {
+		cout << "cube vertex: " << vec4to2(cube[i]) << endl;
+	}*/
+
+	// draw model gnomon
+
+	setLineColour(vec3(1.0f, 0.0f, 0.0f));
+	drawLine(vec4to2(model_gnomon[0]), vec4to2(model_gnomon[1]));
+	setLineColour(vec3(0.0f, 1.0f, 0.0f));
+	drawLine(vec4to2(model_gnomon[0]), vec4to2(model_gnomon[2]));
+	setLineColour(vec3(0.0f, 0.0f, 1.0f));
+	drawLine(vec4to2(model_gnomon[0]), vec4to2(model_gnomon[3]));
+
+	// draw model gnomon
+
+	setLineColour(vec3(1.0f, 1.0f, 0.0f));
+	drawLine(vec4to2(world_gnomon[0]), vec4to2(world_gnomon[1]));
+	setLineColour(vec3(0.0f, 1.0f, 1.0f));
+	drawLine(vec4to2(world_gnomon[0]), vec4to2(world_gnomon[2]));
+	setLineColour(vec3(1.0f, 0.0f, 1.0f));
+	drawLine(vec4to2(world_gnomon[0]), vec4to2(world_gnomon[3]));
+
+	// draw cube
+	setLineColour(vec3(0.0f,0.0f,0.0f));
+	drawLine(vec4to2(cube[0]), vec4to2(cube[1]));
+	drawLine(vec4to2(cube[0]), vec4to2(cube[2]));
+	drawLine(vec4to2(cube[0]), vec4to2(cube[3]));
+	drawLine(vec4to2(cube[5]), vec4to2(cube[1]));
+	drawLine(vec4to2(cube[5]), vec4to2(cube[3]));
+	drawLine(vec4to2(cube[2]), vec4to2(cube[4]));
+	drawLine(vec4to2(cube[2]), vec4to2(cube[6]));
+	drawLine(vec4to2(cube[1]), vec4to2(cube[4]));
+	drawLine(vec4to2(cube[6]), vec4to2(cube[3]));
+	drawLine(vec4to2(cube[4]), vec4to2(cube[7]));
+	drawLine(vec4to2(cube[5]), vec4to2(cube[7]));
+	drawLine(vec4to2(cube[6]), vec4to2(cube[7]));
+
 	// Draw outer square:
+	/*
 	setLineColour(vec3(1.0f, 0.7f, 0.8f));
 	drawLine(vec2(-0.5f, -0.5f), vec2(0.5f, -0.5f));
 	drawLine(vec2(0.5f, -0.5f), vec2(0.5f, 0.5f));
@@ -203,6 +502,8 @@ void A2::appLogic()
 	drawLine(vec2(0.25f, -0.25f), vec2(0.25f, 0.25f));
 	drawLine(vec2(0.25f, 0.25f), vec2(-0.25f, 0.25f));
 	drawLine(vec2(-0.25f, 0.25f), vec2(-0.25f, -0.25f));
+	
+	*/
 }
 
 //----------------------------------------------------------------------------------------
@@ -232,7 +533,38 @@ void A2::guiLogic()
 		if( ImGui::Button( "Quit Application" ) ) {
 			glfwSetWindowShouldClose(m_window, GL_TRUE);
 		}
+		if( ImGui::Button( "Reset Application" ) ) {
+			reset();
+		}
+		
+		ImGui::Separator();
 
+		if( ImGui::Button( "Rotate View Mode" ) ) {
+			interaction_mode = "Rotate View";
+		}
+		if( ImGui::Button( "Translate View Mode" ) ) {
+			interaction_mode = "Translate View";
+		}
+		if( ImGui::Button( "Perspective Mode" ) ) {
+			interaction_mode = "Perspective";
+		}
+		if( ImGui::Button( "Rotate Model Mode" ) ) {
+			interaction_mode = "Rotate Model";
+		}
+		if( ImGui::Button( "Translate Model Mode" ) ) {
+			interaction_mode = "Translate Model";
+		}
+		if( ImGui::Button( "Scale Model Mode" ) ) {
+			interaction_mode = "Scale Model";
+		}
+
+		ImGui::Separator();
+
+		ImGui::Text( "Interaction Mode: %s", interaction_mode.c_str() );
+		ImGui::Text( "Near Plane Distance: %.1f", near );
+		ImGui::Text( "Far Plane Distance: %.1f", far );
+		ImGui::Text( "Field of View: %.1f degrees", (1/DEGREES_TO_RADIANS) * theta );
+		ImGui::Text( "Aspect Ratio: %.1f", aspect );
 		ImGui::Text( "Framerate: %.1f FPS", ImGui::GetIO().Framerate );
 
 	ImGui::End();
@@ -315,7 +647,14 @@ bool A2::mouseMoveEvent (
 ) {
 	bool eventHandled(false);
 
-	// Fill in with event handling code...
+	if (!ImGui::IsMouseHoveringAnyWindow()) {
+		if (dragging) {
+			int current_mouse_x_posn = ImGui::GetMousePos().x;
+			rotation_amount += current_mouse_x_posn - prev_mouse_x_posn;
+			prev_mouse_x_posn = current_mouse_x_posn;
+			eventHandled = true;
+		}
+	}
 
 	return eventHandled;
 }
@@ -331,7 +670,38 @@ bool A2::mouseButtonInputEvent (
 ) {
 	bool eventHandled(false);
 
+	// dragging is 3 bits right|middle|left
+
 	// Fill in with event handling code...
+	if (!ImGui::IsMouseHoveringAnyWindow()) {
+		if (button == GLFW_MOUSE_BUTTON_LEFT && actions == GLFW_PRESS) {
+			prev_mouse_x_posn = ImGui::GetMousePos().x;
+			dragging |= 1UL << 0;
+			eventHandled = true;
+		}
+		if (button == GLFW_MOUSE_BUTTON_LEFT && actions == GLFW_RELEASE) {
+			dragging &= ~(1UL << 0);
+			eventHandled = true;
+		}
+		if (button == GLFW_MOUSE_BUTTON_MIDDLE && actions == GLFW_PRESS) {
+			prev_mouse_x_posn = ImGui::GetMousePos().x;
+			dragging |= 1UL << 1;
+			eventHandled = true;
+		}
+		if (button == GLFW_MOUSE_BUTTON_MIDDLE && actions == GLFW_RELEASE) {
+			dragging &= ~(1UL << 1);
+			eventHandled = true;
+		}
+		if (button == GLFW_MOUSE_BUTTON_RIGHT && actions == GLFW_PRESS) {
+			prev_mouse_x_posn = ImGui::GetMousePos().x;
+			dragging |= 1UL << 2;
+			eventHandled = true;
+		}
+		if (button == GLFW_MOUSE_BUTTON_RIGHT && actions == GLFW_RELEASE) {
+			dragging &= ~(1UL << 2);
+			eventHandled = true;
+		}
+	}
 
 	return eventHandled;
 }
@@ -378,6 +748,33 @@ bool A2::keyInputEvent (
 	bool eventHandled(false);
 
 	// Fill in with event handling code...
+	if( action == GLFW_PRESS ) {
+		if (key == GLFW_KEY_Q) {
+			glfwSetWindowShouldClose(m_window, GL_TRUE);
+			eventHandled = true;
+		} else if (key == GLFW_KEY_A) {
+			reset();
+			eventHandled = true;
+		} else if (key == GLFW_KEY_R) {
+			interaction_mode = "Rotate Model";
+			eventHandled = true;
+		} else if (key == GLFW_KEY_T) {
+			interaction_mode = "Translate Model";
+			eventHandled = true;
+		} else if (key == GLFW_KEY_S) {
+			interaction_mode = "Scale Model";
+			eventHandled = true;
+		} else if (key == GLFW_KEY_P) {
+			interaction_mode = "Perspective";
+			eventHandled = true;
+		} else if (key == GLFW_KEY_N) {
+			interaction_mode = "Translate View";
+			eventHandled = true;
+		} else if (key == GLFW_KEY_O) {
+			interaction_mode = "Rotate View";
+			eventHandled = true;
+		}
+	}
 
 	return eventHandled;
 }
