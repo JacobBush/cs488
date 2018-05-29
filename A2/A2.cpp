@@ -27,7 +27,7 @@ VertexData::VertexData()
 A2::A2()
 	: m_currentLineColour(vec3(0.0f))
 {
-
+	reset();
 }
 
 //----------------------------------------------------------------------------------------
@@ -55,6 +55,149 @@ void A2::init()
 	generateVertexBuffers();
 
 	mapVboDataToVertexAttributeLocation();
+}
+
+//
+void A2::reset() {
+	theta = 0.5f;
+	aspect = 1.0f;
+	near = 1.0f;
+	far = 10.0f;
+	interaction_mode = "Rotate Model";
+	prev_mouse_x_posn = 0.0f;
+	dragging = 0;
+	rotation_amount = 0.0f;
+	rotation_speed = 0.0025f;
+	translation_speed = 0.0025f;
+	scaling_speed = 0.0025f;
+
+	initPerspectiveMatrix();
+	initViewMatrix();
+	initModelMatrix();
+}
+
+//
+mat4 A2::translationMatrix(float dx, float dy, float dz) {
+	return mat4(
+		vec4(1,0,0,0),
+		vec4(0,1,0,0),
+		vec4(0,0,1,0),
+		vec4(dx,dy,dz,1)
+	);
+}
+
+mat4 A2::scaleMatrix(float sx, float sy, float sz) {
+	return mat4(
+		vec4(sx,0,0,0),
+		vec4(0,sy,0,0),
+		vec4(0,0,sz,0),
+		vec4(0,0,0,1)
+	);
+}
+
+// axis: 0=x, 1=y, 2=z
+mat4 A2::rotationMatrix(int axis, float theta) {
+	switch(axis) {
+		case 0:
+			return mat4(
+				vec4(1,0,0,0),
+				vec4(0,cos(theta), sin(theta), 0),
+				vec4(0, -sin(theta), cos(theta), 0),
+				vec4(0,0,0,1)
+			);
+		case 1:
+			return mat4(
+				vec4(cos(theta),0,-sin(theta),0),
+				vec4(0, 1, 0, 0),
+				vec4(sin(theta), 0, cos(theta), 0),
+				vec4(0,0,0,1)
+			);
+		case 2:
+			return mat4(
+				vec4(cos(theta), sin(theta), 0, 0),
+				vec4(-sin(theta), cos(theta), 0, 0),
+				vec4(0,0,1,0),
+				vec4(0,0,0,1)
+			);
+		default:
+			throw invalid_argument( "axis must be in {0,1,2}" );
+	}
+}
+
+//
+void A2::initPerspectiveMatrix() {
+	P = mat4(
+		vec4(1/(tan(theta/2)*aspect),0,0,0),
+		vec4(0, 1/tan(theta/2), 0, 0),
+		vec4(0,0,-(far + near)/(far-near), -1),
+		vec4(0,0,(-2*far*near)/(far-near),0)
+	);
+}
+
+//
+void A2::initModelMatrix() {
+	M = mat4();
+}
+
+//
+void A2::initViewMatrix() {
+	V = translationMatrix(0.0f,0.0f,10.0f);
+}
+
+//
+void A2::setPerspectiveMatrix() {
+}
+
+//
+void A2::setModelMatrix() {
+	// Will update model matrix to current
+	if (interaction_mode == "Rotate Model") {
+		if ((dragging >> 0) & 1U) {
+			// dragging by x
+			M *= rotationMatrix(0, float(rotation_amount) * rotation_speed);
+		}
+		if ((dragging >> 1) & 1U) {
+			// dragging by y
+			M *= rotationMatrix(1, float(rotation_amount) * rotation_speed);
+		}
+		if ((dragging >> 2) & 1U) {
+			// dragging by z
+			M *= rotationMatrix(2, float(rotation_amount) * rotation_speed);
+		}
+		rotation_amount = 0;
+	} else if (interaction_mode == "Scale Model") {
+		if ((dragging >> 0) & 1U) {
+			// dragging by x
+			M *= scaleMatrix(1 + float(rotation_amount) * scaling_speed, 1, 1);
+		}
+		if ((dragging >> 1) & 1U) {
+			// dragging by y
+			M *= scaleMatrix(1, 1 + float(rotation_amount) * scaling_speed, 1);
+		}
+		if ((dragging >> 2) & 1U) {
+			// dragging by z
+			M *= scaleMatrix(1, 1, 1 + float(rotation_amount) * scaling_speed);
+		}
+		rotation_amount = 0;
+	} else if (interaction_mode == "Translate Model") {
+		if ((dragging >> 0) & 1U) {
+			// dragging by x
+			M *= translationMatrix(float(rotation_amount) * translation_speed, 0, 0);
+		}
+		if ((dragging >> 1) & 1U) {
+			// dragging by y
+			M *= translationMatrix(0, float(rotation_amount) * translation_speed, 0);
+		}
+		if ((dragging >> 2) & 1U) {
+			// dragging by z
+			M *= translationMatrix(0, 0, float(rotation_amount) * translation_speed);
+		}
+		rotation_amount = 0;
+	}
+}
+
+//
+void A2::setViewMatrix() {
 }
 
 //----------------------------------------------------------------------------------------
@@ -178,6 +321,10 @@ void A2::drawLine(
 	m_vertexData.numVertices += 2;
 }
 
+vec2 vec4to2(vec4 vec) {
+	return vec2(vec[0], vec[1]);
+}
+
 //----------------------------------------------------------------------------------------
 /*
  * Called once per frame, before guiLogic().
@@ -189,7 +336,93 @@ void A2::appLogic()
 	// Call at the beginning of frame, before drawing lines:
 	initLineData();
 
+	vec4 cube[8] = {
+		vec4(1.0f,1.0f,1.0f,1.0f),
+		vec4(1.0f,1.0f,-1.0f,1.0f),
+		vec4(1.0f,-1.0f,1.0f,1.0f),
+		vec4(-1.0f,1.0f,1.0f,1.0f),
+		vec4(1.0f,-1.0f,-1.0f,1.0f),
+		vec4(-1.0f,1.0f,-1.0f,1.0f),
+		vec4(-1.0f,-1.0f,1.0f,1.0f),
+		vec4(-1.0f,-1.0f,-1.0f,1.0f)
+	};
+
+	vec4 model_gnomon[4] = {
+		vec4(0.0f,0.0f,0.0f,1.0f),
+		vec4(-2.0f, 0.0f, 0.0f, 1.0f),
+		vec4(0.0f, -2.0f, 0.0f, 1.0f),
+		vec4(0.0f, 0.0f, -2.0f, 1.0f)
+	};
+
+	vec4 world_gnomon[4] = {
+		vec4(0.0f,0.0f,0.0f,1.0f),
+		vec4(-2.0f, 0.0f, 0.0f, 1.0f),
+		vec4(0.0f, -2.0f, 0.0f, 1.0f),
+		vec4(0.0f, 0.0f, -2.0f, 1.0f)
+	};
+
+	setModelMatrix();
+	setViewMatrix();
+	setPerspectiveMatrix();
+
+	// transform cube
+	for (int i = 0; i < 8; i++) {
+		cube[i] = P * V * M * cube[i];
+		cube[i] /= cube[i][3];
+	}
+
+	// transform model gnomon
+	for (int i = 0; i < 4; i++) {
+		model_gnomon[i] = P * V * M * model_gnomon[i];
+		model_gnomon[i] /= model_gnomon[i][3];
+
+		world_gnomon[i] = P * V * world_gnomon[i];
+		world_gnomon[i] /= world_gnomon[i][3];
+	}
+
+//	cout << "P = " << P << endl;
+//	cout << "V = " << V << endl;
+//	cout << "M = " << M << endl;
+/*
+	for (int i = 0; i < 8; i++) {
+		cout << "cube vertex: " << vec4to2(cube[i]) << endl;
+	}*/
+
+	// draw model gnomon
+
+	setLineColour(vec3(1.0f, 0.0f, 0.0f));
+	drawLine(vec4to2(model_gnomon[0]), vec4to2(model_gnomon[1]));
+	setLineColour(vec3(0.0f, 1.0f, 0.0f));
+	drawLine(vec4to2(model_gnomon[0]), vec4to2(model_gnomon[2]));
+	setLineColour(vec3(0.0f, 0.0f, 1.0f));
+	drawLine(vec4to2(model_gnomon[0]), vec4to2(model_gnomon[3]));
+
+	// draw model gnomon
+
+	setLineColour(vec3(1.0f, 1.0f, 0.0f));
+	drawLine(vec4to2(world_gnomon[0]), vec4to2(world_gnomon[1]));
+	setLineColour(vec3(0.0f, 1.0f, 1.0f));
+	drawLine(vec4to2(world_gnomon[0]), vec4to2(world_gnomon[2]));
+	setLineColour(vec3(1.0f, 0.0f, 1.0f));
+	drawLine(vec4to2(world_gnomon[0]), vec4to2(world_gnomon[3]));
+
+	// draw cube
+	setLineColour(vec3(0.0f,0.0f,0.0f));
+	drawLine(vec4to2(cube[0]), vec4to2(cube[1]));
+	drawLine(vec4to2(cube[0]), vec4to2(cube[2]));
+	drawLine(vec4to2(cube[0]), vec4to2(cube[3]));
+	drawLine(vec4to2(cube[5]), vec4to2(cube[1]));
+	drawLine(vec4to2(cube[5]), vec4to2(cube[3]));
+	drawLine(vec4to2(cube[2]), vec4to2(cube[4]));
+	drawLine(vec4to2(cube[2]), vec4to2(cube[6]));
+	drawLine(vec4to2(cube[1]), vec4to2(cube[4]));
+	drawLine(vec4to2(cube[6]), vec4to2(cube[3]));
+	drawLine(vec4to2(cube[4]), vec4to2(cube[7]));
+	drawLine(vec4to2(cube[5]), vec4to2(cube[7]));
+	drawLine(vec4to2(cube[6]), vec4to2(cube[7]));
+
 	// Draw outer square:
+	/*
 	setLineColour(vec3(1.0f, 0.7f, 0.8f));
 	drawLine(vec2(-0.5f, -0.5f), vec2(0.5f, -0.5f));
 	drawLine(vec2(0.5f, -0.5f), vec2(0.5f, 0.5f));
@@ -203,6 +436,8 @@ void A2::appLogic()
 	drawLine(vec2(0.25f, -0.25f), vec2(0.25f, 0.25f));
 	drawLine(vec2(0.25f, 0.25f), vec2(-0.25f, 0.25f));
 	drawLine(vec2(-0.25f, 0.25f), vec2(-0.25f, -0.25f));
+	
+	*/
 }
 
 //----------------------------------------------------------------------------------------
@@ -232,7 +467,23 @@ void A2::guiLogic()
 		if( ImGui::Button( "Quit Application" ) ) {
 			glfwSetWindowShouldClose(m_window, GL_TRUE);
 		}
+		if( ImGui::Button( "Reset Application" ) ) {
+			reset();
+		}
+		
+		ImGui::Separator();
 
+		if( ImGui::Button( "Rotate Model Mode" ) ) {
+			interaction_mode = "Rotate Model";
+		}
+		if( ImGui::Button( "Translate Model Mode" ) ) {
+			interaction_mode = "Translate Model";
+		}
+		if( ImGui::Button( "Scale Model Mode" ) ) {
+			interaction_mode = "Scale Model";
+		}
+
+		ImGui::Text( "Current Interaction Mode: %s", interaction_mode.c_str() );
 		ImGui::Text( "Framerate: %.1f FPS", ImGui::GetIO().Framerate );
 
 	ImGui::End();
@@ -315,7 +566,14 @@ bool A2::mouseMoveEvent (
 ) {
 	bool eventHandled(false);
 
-	// Fill in with event handling code...
+	if (!ImGui::IsMouseHoveringAnyWindow()) {
+		if (dragging) {
+			int current_mouse_x_posn = ImGui::GetMousePos().x;
+			rotation_amount += current_mouse_x_posn - prev_mouse_x_posn;
+			prev_mouse_x_posn = current_mouse_x_posn;
+			eventHandled = true;
+		}
+	}
 
 	return eventHandled;
 }
@@ -331,7 +589,38 @@ bool A2::mouseButtonInputEvent (
 ) {
 	bool eventHandled(false);
 
+	// dragging is 3 bits right|middle|left
+
 	// Fill in with event handling code...
+	if (!ImGui::IsMouseHoveringAnyWindow()) {
+		if (button == GLFW_MOUSE_BUTTON_LEFT && actions == GLFW_PRESS) {
+			prev_mouse_x_posn = ImGui::GetMousePos().x;
+			dragging |= 1UL << 0;
+			eventHandled = true;
+		}
+		if (button == GLFW_MOUSE_BUTTON_LEFT && actions == GLFW_RELEASE) {
+			dragging &= ~(1UL << 0);
+			eventHandled = true;
+		}
+		if (button == GLFW_MOUSE_BUTTON_MIDDLE && actions == GLFW_PRESS) {
+			prev_mouse_x_posn = ImGui::GetMousePos().x;
+			dragging |= 1UL << 1;
+			eventHandled = true;
+		}
+		if (button == GLFW_MOUSE_BUTTON_MIDDLE && actions == GLFW_RELEASE) {
+			dragging &= ~(1UL << 1);
+			eventHandled = true;
+		}
+		if (button == GLFW_MOUSE_BUTTON_RIGHT && actions == GLFW_PRESS) {
+			prev_mouse_x_posn = ImGui::GetMousePos().x;
+			dragging |= 1UL << 2;
+			eventHandled = true;
+		}
+		if (button == GLFW_MOUSE_BUTTON_RIGHT && actions == GLFW_RELEASE) {
+			dragging &= ~(1UL << 2);
+			eventHandled = true;
+		}
+	}
 
 	return eventHandled;
 }
@@ -378,6 +667,24 @@ bool A2::keyInputEvent (
 	bool eventHandled(false);
 
 	// Fill in with event handling code...
+	if( action == GLFW_PRESS ) {
+		if (key == GLFW_KEY_Q) {
+			glfwSetWindowShouldClose(m_window, GL_TRUE);
+			eventHandled = true;
+		} else if (key == GLFW_KEY_A) {
+			reset();
+			eventHandled = true;
+		} else if (key == GLFW_KEY_R) {
+			interaction_mode = "Rotate Model";
+			eventHandled = true;
+		} else if (key == GLFW_KEY_T) {
+			interaction_mode = "Translate Model";
+			eventHandled = true;
+		} else if (key == GLFW_KEY_S) {
+			interaction_mode = "Scale Model";
+			eventHandled = true;
+		}
+	}
 
 	return eventHandled;
 }
