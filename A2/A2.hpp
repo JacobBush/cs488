@@ -101,8 +101,4 @@ protected:
 	char dragging;
 	int prev_mouse_x_posn;
 	int rotation_amount;
-	float rotation_speed;
-	float translation_speed;
-	float scaling_speed;
-
 };

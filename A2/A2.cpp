@@ -11,6 +11,9 @@ using namespace std;
 #include <glm/gtx/io.hpp>
 using namespace glm;
 
+const float PI = 3.14159265359f;
+const float DEGREES_TO_RADIANS = PI/180;
+
 //----------------------------------------------------------------------------------------
 // Constructor
 VertexData::VertexData()
@@ -59,7 +62,7 @@ void A2::init()
 
 //
 void A2::reset() {
-	theta = 0.5f;
+	theta = 30.0f * DEGREES_TO_RADIANS;
 	aspect = 1.0f;
 	near = 1.0f;
 	far = 10.0f;
@@ -67,9 +70,6 @@ void A2::reset() {
 	prev_mouse_x_posn = 0.0f;
 	dragging = 0;
 	rotation_amount = 0.0f;
-	rotation_speed = 0.0025f;
-	translation_speed = 0.0025f;
-	scaling_speed = 0.0025f;
 
 	initPerspectiveMatrix();
 	initViewMatrix();
@@ -146,51 +146,85 @@ void A2::initViewMatrix() {
 
 //
 void A2::setPerspectiveMatrix() {
+	const float FOV_SCALING_FACTOR = 0.0025f;
+	const float PLANE_TRANSLATE_FACTOR = 0.0025f;
+	if (interaction_mode == "Perspective") {
+		if ((dragging >> 0) & 1U) {
+			// dragging by left
+			theta += rotation_amount * FOV_SCALING_FACTOR;
+			if (theta < 5.0f * DEGREES_TO_RADIANS) {
+				theta = 5.0f * DEGREES_TO_RADIANS;
+			}
+			if (theta > 160.0f * DEGREES_TO_RADIANS) {
+				theta = 160.0f * DEGREES_TO_RADIANS;
+			}
+		}
+		if ((dragging >> 1) & 1U) {
+			// dragging by middle
+			// From Piazza - don't need to restrict
+			near += rotation_amount * PLANE_TRANSLATE_FACTOR;
+		}
+		if ((dragging >> 2) & 1U) {
+			// dragging by right
+			// From Piazza - don't need to restrict
+			far += rotation_amount * PLANE_TRANSLATE_FACTOR;
+		}
+		rotation_amount = 0;
+	}
+	P = mat4(
+		vec4(1/(tan(theta/2)*aspect),0,0,0),
+		vec4(0, 1/tan(theta/2), 0, 0),
+		vec4(0,0,-(far + near)/(far-near), -1),
+		vec4(0,0,(-2*far*near)/(far-near),0)
+	);
 }
 
 //
 void A2::setModelMatrix() {
+	const float ROTATION_SPEED = 0.0025f;
+	const float TRANSLATION_SPEED = 0.0025f;
+	const float SCALING_SPEED = 0.0025f;
 	// Will update model matrix to current
 	if (interaction_mode == "Rotate Model") {
 		if ((dragging >> 0) & 1U) {
-			// dragging by x
-			M *= rotationMatrix(0, float(rotation_amount) * rotation_speed);
+			// dragging by left
+			M *= rotationMatrix(0, rotation_amount * ROTATION_SPEED);
 		}
 		if ((dragging >> 1) & 1U) {
-			// dragging by y
-			M *= rotationMatrix(1, float(rotation_amount) * rotation_speed);
+			// dragging by middle
+			M *= rotationMatrix(1, rotation_amount * ROTATION_SPEED);
 		}
 		if ((dragging >> 2) & 1U) {
-			// dragging by z
-			M *= rotationMatrix(2, float(rotation_amount) * rotation_speed);
+			// dragging by right
+			M *= rotationMatrix(2, rotation_amount * ROTATION_SPEED);
 		}
 		rotation_amount = 0;
 	} else if (interaction_mode == "Scale Model") {
 		if ((dragging >> 0) & 1U) {
-			// dragging by x
-			M *= scaleMatrix(1 + float(rotation_amount) * scaling_speed, 1, 1);
+			// dragging by left
+			M *= scaleMatrix(1 + rotation_amount * SCALING_SPEED, 1, 1);
 		}
 		if ((dragging >> 1) & 1U) {
-			// dragging by y
-			M *= scaleMatrix(1, 1 + float(rotation_amount) * scaling_speed, 1);
+			// dragging by middle
+			M *= scaleMatrix(1, 1 + rotation_amount * SCALING_SPEED, 1);
 		}
 		if ((dragging >> 2) & 1U) {
-			// dragging by z
-			M *= scaleMatrix(1, 1, 1 + float(rotation_amount) * scaling_speed);
+			// dragging by right
+			M *= scaleMatrix(1, 1, 1 + rotation_amount * SCALING_SPEED);
 		}
 		rotation_amount = 0;
 	} else if (interaction_mode == "Translate Model") {
 		if ((dragging >> 0) & 1U) {
-			// dragging by x
-			M *= translationMatrix(float(rotation_amount) * translation_speed, 0, 0);
+			// dragging by left
+			M *= translationMatrix(rotation_amount * TRANSLATION_SPEED, 0, 0);
 		}
 		if ((dragging >> 1) & 1U) {
-			// dragging by y
-			M *= translationMatrix(0, float(rotation_amount) * translation_speed, 0);
+			// dragging by middle
+			M *= translationMatrix(0, rotation_amount * TRANSLATION_SPEED, 0);
 		}
 		if ((dragging >> 2) & 1U) {
-			// dragging by z
-			M *= translationMatrix(0, 0, float(rotation_amount) * translation_speed);
+			// dragging by right
+			M *= translationMatrix(0, 0, rotation_amount * TRANSLATION_SPEED);
 		}
 		rotation_amount = 0;
 	}
@@ -482,8 +516,17 @@ void A2::guiLogic()
 		if( ImGui::Button( "Scale Model Mode" ) ) {
 			interaction_mode = "Scale Model";
 		}
+		if( ImGui::Button( "Perspective Mode" ) ) {
+			interaction_mode = "Perspective";
+		}
 
-		ImGui::Text( "Current Interaction Mode: %s", interaction_mode.c_str() );
+		ImGui::Separator();
+
+		ImGui::Text( "Interaction Mode: %s", interaction_mode.c_str() );
+		ImGui::Text( "Near Plane Distance: %.1f", near );
+		ImGui::Text( "Far Plane Distance: %.1f", far );
+		ImGui::Text( "Field of View: %.1f degrees", (1/DEGREES_TO_RADIANS) * theta );
+		ImGui::Text( "Aspect Ratio: %.1f", aspect );
 		ImGui::Text( "Framerate: %.1f FPS", ImGui::GetIO().Framerate );
 
 	ImGui::End();
@@ -682,6 +725,9 @@ bool A2::keyInputEvent (
 			eventHandled = true;
 		} else if (key == GLFW_KEY_S) {
 			interaction_mode = "Scale Model";
+			eventHandled = true;
+		} else if (key == GLFW_KEY_P) {
+			interaction_mode = "Perspective";
 			eventHandled = true;
 		}
 	}
