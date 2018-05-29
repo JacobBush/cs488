@@ -104,6 +104,9 @@ protected:
 	glm::vec2 prev_mouse_posn;
 	glm::vec2 mouse_movement;
 
+	glm::vec2 dragging_viewport_start;
+	glm::vec2 dragging_viewport_end;
+
 	glm::vec2 viewportPosn1;
 	glm::vec2 viewportPosn2;
 };

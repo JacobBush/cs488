@@ -75,6 +75,7 @@ void A2::reset() {
 	initViewMatrix();
 	initModelMatrix();
 
+	dragging_viewport_start = vec2(0,0);
 	viewportPosn1 = vec2(-0.95f, -0.95f);
 	viewportPosn2 = vec2(0.95f, 0.95f);
 }
@@ -271,7 +272,21 @@ void A2::setViewMatrix() {
 
 //
 void A2::setViewport() {
-
+	if (interaction_mode == "Viewport") {
+		if ((dragging >> 0) & 1U) {
+			// dragging by left
+			dragging_viewport_end += mouse_movement;
+			int screen_width, screen_height;
+			glfwGetWindowSize(m_window, &screen_width, &screen_height);
+			viewportPosn1 = vec2(
+				(2.0f * dragging_viewport_start.x/screen_width) - 1.0f, 
+				(2.0f * (1.0f - dragging_viewport_start.y/screen_height)) - 1.0f);
+			viewportPosn2 = vec2(
+				(2.0f * dragging_viewport_end.x/screen_width) - 1.0f, 
+				(2.0f * (1.0f - dragging_viewport_end.y/screen_height)) - 1.0f);
+		}
+		mouse_movement = vec2(0.0f,0.0f);
+	}
 }
 
 //----------------------------------------------------------------------------------------
@@ -559,6 +574,9 @@ void A2::guiLogic()
 		if( ImGui::Button( "Scale Model Mode" ) ) {
 			interaction_mode = "Scale Model";
 		}
+		if( ImGui::Button( "Draw Viewport Mode" ) ) {
+			interaction_mode = "Viewport";
+		}
 
 		ImGui::Separator();
 
@@ -650,7 +668,7 @@ bool A2::mouseMoveEvent (
 	bool eventHandled(false);
 
 	if (!ImGui::IsMouseHoveringAnyWindow()) {
-		if (dragging) {;
+		if (dragging) {
 			mouse_movement.x += xPos - prev_mouse_posn.x;
 			mouse_movement.y += yPos - prev_mouse_posn.y;
 			prev_mouse_posn = vec2(xPos, yPos);
@@ -679,6 +697,10 @@ bool A2::mouseButtonInputEvent (
 		if (button == GLFW_MOUSE_BUTTON_LEFT && actions == GLFW_PRESS) {
 			prev_mouse_posn = vec2(ImGui::GetMousePos().x,  ImGui::GetMousePos().y);
 			dragging |= 1UL << 0;
+			if (interaction_mode == "Viewport") {
+				dragging_viewport_start = prev_mouse_posn;
+				dragging_viewport_end = dragging_viewport_start;
+			}
 			eventHandled = true;
 		}
 		if (button == GLFW_MOUSE_BUTTON_LEFT && actions == GLFW_RELEASE) {
