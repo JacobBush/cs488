@@ -65,7 +65,7 @@ void A2::reset() {
 	theta = 30.0f * DEGREES_TO_RADIANS;
 	aspect = 1.0f;
 	near = 1.0f;
-	far = 10.0f;
+	far = 15.0f;
 	interaction_mode = "Rotate Model";
 	dragging = 0;
 	prev_mouse_posn = vec2(0.0f,0.0f);
@@ -477,11 +477,45 @@ void A2::clipNormalizeAndDrawLine (vec4 A, vec4 B) {
 	A = P * A;
 	B = P * B;
 
-	// Clip other planes
-
 	// Normalize
 	A /= A[3];
 	B /= B[3];
+
+	// Clip other planes
+
+	// Left
+	if (A.x < -1 && B.x < -1) {
+		// trivially reject
+		return;
+	}
+	if (A.x < -1) {
+		// move A back in
+		float t = (A.x+1)/(A.x - B.x);
+		A = A + t*(B-A);
+	}
+	if (B.x < -1) {
+		// move B back in
+		float t = (B.x+1)/(B.x - A.x);
+		B = B + t*(A-B);
+	}
+
+	// Right
+	if (A.x > 1 && B.x > 1) {
+		// trivially reject
+		return;
+	}
+	if (A.x > 1) {
+		// move A back in
+		float t = (1 - A.x)/(-A.x + B.x);
+		A = A + t*(B-A);
+	}
+	if (B.x > 1) {
+		// move B back in
+		float t = (1 - B.x)/(-B.x + A.x);
+		B = B + t*(A-B);
+	}
+
+
 	// draw in viewport
 	drawLine(moveToViewport(vec4to2(A)), moveToViewport(vec4to2(B)));
 }
