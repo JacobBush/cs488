@@ -233,7 +233,7 @@ void A2::setModelMatrix() {
 
 //
 void A2::setViewMatrix() {
-	const float ROTATION_SPEED = 0.0025f;
+	const float ROTATION_SPEED = 0.0015f;
 	const float TRANSLATION_SPEED = 0.0025f;
 
 	if (interaction_mode == "Rotate View") {
@@ -253,15 +253,15 @@ void A2::setViewMatrix() {
 	} if (interaction_mode == "Translate View") {
 		if ((dragging >> 0) & 1U) {
 			// dragging by left
-			V *= translationMatrix(mouse_movement.x * TRANSLATION_SPEED, 0, 0);
+			V = translationMatrix(mouse_movement.x * TRANSLATION_SPEED, 0, 0) * V;
 		}
 		if ((dragging >> 1) & 1U) {
 			// dragging by middle
-			V *= translationMatrix(0, mouse_movement.x * TRANSLATION_SPEED, 0);
+			V = translationMatrix(0, mouse_movement.x * TRANSLATION_SPEED, 0) * V;
 		}
 		if ((dragging >> 2) & 1U) {
 			// dragging by right
-			V *= translationMatrix(0, 0, mouse_movement.x * TRANSLATION_SPEED);
+			V = translationMatrix(0, 0, mouse_movement.x * TRANSLATION_SPEED) * V;
 		}
 		mouse_movement = vec2(0.0f,0.0f);
 	}
@@ -515,6 +515,37 @@ void A2::clipNormalizeAndDrawLine (vec4 A, vec4 B) {
 		B = B + t*(A-B);
 	}
 
+	// Bottom
+	if (A.y < -1 && B.y < -1) {
+		// trivially reject
+		return;
+	}
+	if (A.y < -1) {
+		// move A back in
+		float t = (A.y+1)/(A.y - B.y);
+		A = A + t*(B-A);
+	}
+	if (B.y < -1) {
+		// move B back in
+		float t = (B.y+1)/(B.y - A.y);
+		B = B + t*(A-B);
+	}
+
+	// Top
+	if (A.y > 1 && B.y > 1) {
+		// trivially reject
+		return;
+	}
+	if (A.y > 1) {
+		// move A back in
+		float t = (1 - A.y)/(-A.y + B.y);
+		A = A + t*(B-A);
+	}
+	if (B.y > 1) {
+		// move B back in
+		float t = (1 - B.y)/(-B.y + A.y);
+		B = B + t*(A-B);
+	}
 
 	// draw in viewport
 	drawLine(moveToViewport(vec4to2(A)), moveToViewport(vec4to2(B)));
