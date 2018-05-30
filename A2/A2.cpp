@@ -454,6 +454,25 @@ void A2::clipNormalizeAndDrawLine (vec4 A, vec4 B) {
 		B = B + t*(A-B);
 	}
 
+	// Clip far
+	n = vec4(0.0f, 0.0f, -1.0f, 0.0f);
+	p = vec4(0.0f, 0.0f, far, 1.0f);
+	lA = dot((A - p), n);
+	lB = dot((B - p), n);
+
+	if (lA < 0 && lB < 0) {
+		// Trivially reject
+		return;
+	}
+	if (lA < 0) {
+		float t = (lA)/(lA - lB);
+		A = A + t*(B-A);
+	}
+	if (lB < 0) {
+		float t = (lB)/(lB - lA);
+		B = B + t*(A-B);
+	}
+
 	// Multiply by perspective matrix
 	A = P * A;
 	B = P * B;
