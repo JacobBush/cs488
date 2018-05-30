@@ -76,6 +76,9 @@ protected:
 			const glm::vec2 & v1
 	);
 
+	glm::vec2 moveToViewport (glm::vec2 v);
+	void clipNormalizeAndDrawLine(glm::vec4 A, glm::vec4 B);
+
 	void reset();
 
 	ShaderProgram m_shader;
@@ -88,6 +91,9 @@ protected:
 	float aspect;
 	float near;
 	float far;
+
+	// We don't want to scale model gnomon, so move this out.
+	glm::mat4 S;
 
 	glm::mat4 M;
 	glm::mat4 P;

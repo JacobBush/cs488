@@ -138,9 +138,11 @@ void A2::initPerspectiveMatrix() {
 	);
 }
 
+
 //
 void A2::initModelMatrix() {
 	M = mat4();
+	S = mat4();
 }
 
 //
@@ -175,12 +177,7 @@ void A2::setPerspectiveMatrix() {
 		}
 		mouse_movement = vec2(0.0f,0.0f);
 	}
-	P = mat4(
-		vec4(1/(tan(theta/2)*aspect),0,0,0),
-		vec4(0, 1/tan(theta/2), 0, 0),
-		vec4(0,0,-(far + near)/(far-near), -1),
-		vec4(0,0,(-2*far*near)/(far-near),0)
-	);
+	initPerspectiveMatrix();
 }
 
 //
@@ -206,15 +203,15 @@ void A2::setModelMatrix() {
 	} else if (interaction_mode == "Scale Model") {
 		if ((dragging >> 0) & 1U) {
 			// dragging by left
-			M *= scaleMatrix(1 + mouse_movement.x * SCALING_SPEED, 1, 1);
+			S *= scaleMatrix(1 + mouse_movement.x * SCALING_SPEED, 1, 1);
 		}
 		if ((dragging >> 1) & 1U) {
 			// dragging by middle
-			M *= scaleMatrix(1, 1 + mouse_movement.x * SCALING_SPEED, 1);
+			S *= scaleMatrix(1, 1 + mouse_movement.x * SCALING_SPEED, 1);
 		}
 		if ((dragging >> 2) & 1U) {
 			// dragging by right
-			M *= scaleMatrix(1, 1, 1 + mouse_movement.x * SCALING_SPEED);
+			S *= scaleMatrix(1, 1, 1 + mouse_movement.x * SCALING_SPEED);
 		}
 		mouse_movement = vec2(0.0f,0.0f);
 	} else if (interaction_mode == "Translate Model") {
@@ -284,6 +281,9 @@ void A2::setViewport() {
 			viewportPosn2 = vec2(
 				(2.0f * dragging_viewport_end.x/screen_width) - 1.0f, 
 				(2.0f * (1.0f - dragging_viewport_end.y/screen_height)) - 1.0f);
+			float vp_width = viewportPosn1.x - viewportPosn2.x;
+			float vp_height = viewportPosn1.y - viewportPosn2.y;
+			aspect = abs(vp_height / vp_width);
 		}
 		mouse_movement = vec2(0.0f,0.0f);
 	}
@@ -410,8 +410,61 @@ void A2::drawLine(
 	m_vertexData.numVertices += 2;
 }
 
-vec2 vec4to2(vec4 vec) {
-	return vec2(vec[0], vec[1]);
+vec2 vec4to2(vec4 v) {
+	return vec2(v[0], v[1]);
+}
+
+vec2 A2::moveToViewport (vec2 w) {
+	const float WINDOW_WIDTH = 2.0f;
+	const float WINDOW_HEIGHT = 2.0f;
+	const float WINDOW_LEFT = -1.0f;
+	const float WINDOW_BOTTOM = -1.0f;
+
+	float viewport_width = abs(viewportPosn1.x - viewportPosn2.x);
+	float viewport_height = abs(viewportPosn1.y - viewportPosn2.y);
+	float viewport_left = glm::min(viewportPosn1.x, viewportPosn2.x);
+	float viewport_bottom = glm::min(viewportPosn1.y, viewportPosn2.y);
+
+	float viewport_x = (viewport_width/WINDOW_WIDTH) * (w.x - WINDOW_LEFT) + viewport_left;
+	float viewport_y = (viewport_height/WINDOW_HEIGHT) * (w.y - WINDOW_BOTTOM) + viewport_bottom;
+
+	return vec2(viewport_x, viewport_y);
+}
+
+//
+void A2::clipNormalizeAndDrawLine (vec4 A, vec4 B) {
+
+	// clip near
+	
+	vec4 n = vec4(0.0f, 0.0f, 1.0f, 0.0f);
+	vec4 p = vec4(0.0f, 0.0f, near, 1.0f);
+	float lA = dot((A - p), n);
+	float lB = dot((B - p), n);
+
+	if (lA < 0 && lB < 0) {
+		// Trivially reject
+		return;
+	}
+	if (lA < 0) {
+		float t = (lA)/(lA - lB);
+		A = A + t*(B-A);
+	}
+	if (lB < 0) {
+		float t = (lB)/(lB - lA);
+		B = B + t*(A-B);
+	}
+
+	// Multiply by perspective matrix
+	A = P * A;
+	B = P * B;
+
+	// Clip other planes
+
+	// Normalize
+	A /= A[3];
+	B /= B[3];
+	// draw in viewport
+	drawLine(moveToViewport(vec4to2(A)), moveToViewport(vec4to2(B)));
 }
 
 //----------------------------------------------------------------------------------------
@@ -457,17 +510,13 @@ void A2::appLogic()
 
 	// transform cube
 	for (int i = 0; i < 8; i++) {
-		cube[i] = P * V * M * cube[i];
-		cube[i] /= cube[i][3];
+		cube[i] = V * M * S * cube[i];
 	}
 
 	// transform model gnomon
 	for (int i = 0; i < 4; i++) {
-		model_gnomon[i] = P * V * M * model_gnomon[i];
-		model_gnomon[i] /= model_gnomon[i][3];
-
-		world_gnomon[i] = P * V * world_gnomon[i];
-		world_gnomon[i] /= world_gnomon[i][3];
+		model_gnomon[i] = V * M * model_gnomon[i];
+		world_gnomon[i] = V * world_gnomon[i];
 	}
 
 //	cout << "P = " << P << endl;
@@ -481,35 +530,35 @@ void A2::appLogic()
 	// draw model gnomon
 
 	setLineColour(vec3(1.0f, 0.0f, 0.0f));
-	drawLine(vec4to2(model_gnomon[0]), vec4to2(model_gnomon[1]));
+	clipNormalizeAndDrawLine(model_gnomon[0], model_gnomon[1]);
 	setLineColour(vec3(0.0f, 1.0f, 0.0f));
-	drawLine(vec4to2(model_gnomon[0]), vec4to2(model_gnomon[2]));
+	clipNormalizeAndDrawLine(model_gnomon[0], model_gnomon[2]);
 	setLineColour(vec3(0.0f, 0.0f, 1.0f));
-	drawLine(vec4to2(model_gnomon[0]), vec4to2(model_gnomon[3]));
+	clipNormalizeAndDrawLine(model_gnomon[0], model_gnomon[3]);
 
 	// draw model gnomon
 
 	setLineColour(vec3(1.0f, 1.0f, 0.0f));
-	drawLine(vec4to2(world_gnomon[0]), vec4to2(world_gnomon[1]));
+	clipNormalizeAndDrawLine(world_gnomon[0], world_gnomon[1]);
 	setLineColour(vec3(0.0f, 1.0f, 1.0f));
-	drawLine(vec4to2(world_gnomon[0]), vec4to2(world_gnomon[2]));
+	clipNormalizeAndDrawLine(world_gnomon[0], world_gnomon[2]);
 	setLineColour(vec3(1.0f, 0.0f, 1.0f));
-	drawLine(vec4to2(world_gnomon[0]), vec4to2(world_gnomon[3]));
+	clipNormalizeAndDrawLine(world_gnomon[0], world_gnomon[3]);
 
 	// draw cube
 	setLineColour(vec3(0.0f,0.0f,0.0f));
-	drawLine(vec4to2(cube[0]), vec4to2(cube[1]));
-	drawLine(vec4to2(cube[0]), vec4to2(cube[2]));
-	drawLine(vec4to2(cube[0]), vec4to2(cube[3]));
-	drawLine(vec4to2(cube[5]), vec4to2(cube[1]));
-	drawLine(vec4to2(cube[5]), vec4to2(cube[3]));
-	drawLine(vec4to2(cube[2]), vec4to2(cube[4]));
-	drawLine(vec4to2(cube[2]), vec4to2(cube[6]));
-	drawLine(vec4to2(cube[1]), vec4to2(cube[4]));
-	drawLine(vec4to2(cube[6]), vec4to2(cube[3]));
-	drawLine(vec4to2(cube[4]), vec4to2(cube[7]));
-	drawLine(vec4to2(cube[5]), vec4to2(cube[7]));
-	drawLine(vec4to2(cube[6]), vec4to2(cube[7]));
+	clipNormalizeAndDrawLine(cube[0], cube[1]);
+	clipNormalizeAndDrawLine(cube[0], cube[2]);
+	clipNormalizeAndDrawLine(cube[0], cube[3]);
+	clipNormalizeAndDrawLine(cube[5], cube[1]);
+	clipNormalizeAndDrawLine(cube[5], cube[3]);
+	clipNormalizeAndDrawLine(cube[2], cube[4]);
+	clipNormalizeAndDrawLine(cube[2], cube[6]);
+	clipNormalizeAndDrawLine(cube[1], cube[4]);
+	clipNormalizeAndDrawLine(cube[6], cube[3]);
+	clipNormalizeAndDrawLine(cube[4], cube[7]);
+	clipNormalizeAndDrawLine(cube[5], cube[7]);
+	clipNormalizeAndDrawLine(cube[6], cube[7]);
 
 	// Draw Viewport
 	
