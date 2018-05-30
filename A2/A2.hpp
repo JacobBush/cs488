@@ -103,7 +103,7 @@ protected:
 
 	glm::vec3 m_currentLineColour;
 
-	std::string interaction_mode;
+	int interaction_mode;
 
 	// 3 bits for mouse buttons right|middle|left
 	char dragging;

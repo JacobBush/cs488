@@ -66,7 +66,7 @@ void A2::reset() {
 	aspect = 1.0f;
 	near = 1.0f;
 	far = 15.0f;
-	interaction_mode = "Rotate Model";
+	interaction_mode = 3;
 	dragging = 0;
 	prev_mouse_posn = vec2(0.0f,0.0f);
 	mouse_movement = vec2(0.0f,0.0f);
@@ -154,7 +154,7 @@ void A2::initViewMatrix() {
 void A2::setPerspectiveMatrix() {
 	const float FOV_SCALING_FACTOR = 0.0025f;
 	const float PLANE_TRANSLATE_FACTOR = 0.0025f;
-	if (interaction_mode == "Perspective") {
+	if (interaction_mode == 2) {
 		if ((dragging >> 0) & 1U) {
 			// dragging by left
 			theta += mouse_movement.x * FOV_SCALING_FACTOR;
@@ -186,7 +186,7 @@ void A2::setModelMatrix() {
 	const float TRANSLATION_SPEED = 0.0025f;
 	const float SCALING_SPEED = 0.0025f;
 	// Will update model matrix to current
-	if (interaction_mode == "Rotate Model") {
+	if (interaction_mode == 3) {
 		if ((dragging >> 0) & 1U) {
 			// dragging by left
 			M *= rotationMatrix(0, mouse_movement.x * ROTATION_SPEED);
@@ -200,7 +200,7 @@ void A2::setModelMatrix() {
 			M *= rotationMatrix(2, mouse_movement.x * ROTATION_SPEED);
 		}
 		mouse_movement = vec2(0.0f,0.0f);
-	} else if (interaction_mode == "Scale Model") {
+	} else if (interaction_mode == 5) {
 		if ((dragging >> 0) & 1U) {
 			// dragging by left
 			S *= scaleMatrix(1 + mouse_movement.x * SCALING_SPEED, 1, 1);
@@ -214,7 +214,7 @@ void A2::setModelMatrix() {
 			S *= scaleMatrix(1, 1, 1 + mouse_movement.x * SCALING_SPEED);
 		}
 		mouse_movement = vec2(0.0f,0.0f);
-	} else if (interaction_mode == "Translate Model") {
+	} else if (interaction_mode == 4) {
 		if ((dragging >> 0) & 1U) {
 			// dragging by left
 			M *= translationMatrix(-mouse_movement.x * TRANSLATION_SPEED, 0, 0);
@@ -236,7 +236,7 @@ void A2::setViewMatrix() {
 	const float ROTATION_SPEED = 0.0015f;
 	const float TRANSLATION_SPEED = 0.0025f;
 
-	if (interaction_mode == "Rotate View") {
+	if (interaction_mode == 0) {
 		if ((dragging >> 0) & 1U) {
 			// dragging by left
 			V = rotationMatrix(0, mouse_movement.x * ROTATION_SPEED) * V;
@@ -250,7 +250,7 @@ void A2::setViewMatrix() {
 			V = rotationMatrix(2, mouse_movement.x * ROTATION_SPEED) * V;
 		}
 		mouse_movement = vec2(0.0f,0.0f);
-	} if (interaction_mode == "Translate View") {
+	} if (interaction_mode == 1) {
 		if ((dragging >> 0) & 1U) {
 			// dragging by left
 			V = translationMatrix(mouse_movement.x * TRANSLATION_SPEED, 0, 0) * V;
@@ -269,7 +269,7 @@ void A2::setViewMatrix() {
 
 //
 void A2::setViewport() {
-	if (interaction_mode == "Viewport") {
+	if (interaction_mode == 6) {
 		if ((dragging >> 0) & 1U) {
 			// dragging by left
 			dragging_viewport_end += mouse_movement;
@@ -689,31 +689,41 @@ void A2::guiLogic()
 		
 		ImGui::Separator();
 
-		if( ImGui::Button( "Rotate View Mode" ) ) {
-			interaction_mode = "Rotate View";
-		}
-		if( ImGui::Button( "Translate View Mode" ) ) {
-			interaction_mode = "Translate View";
-		}
-		if( ImGui::Button( "Perspective Mode" ) ) {
-			interaction_mode = "Perspective";
-		}
-		if( ImGui::Button( "Rotate Model Mode" ) ) {
-			interaction_mode = "Rotate Model";
-		}
-		if( ImGui::Button( "Translate Model Mode" ) ) {
-			interaction_mode = "Translate Model";
-		}
-		if( ImGui::Button( "Scale Model Mode" ) ) {
-			interaction_mode = "Scale Model";
-		}
-		if( ImGui::Button( "Draw Viewport Mode" ) ) {
-			interaction_mode = "Viewport";
-		}
+		ImGui::RadioButton( "Rotate View Mode", &interaction_mode, 0);
+		ImGui::RadioButton( "Translate View Mode", &interaction_mode, 1);
+		ImGui::RadioButton( "Perspective Mode", &interaction_mode, 2);
+		ImGui::RadioButton( "Rotate Model Mode", &interaction_mode, 3);
+		ImGui::RadioButton( "Translate Model Mode", &interaction_mode, 4);
+		ImGui::RadioButton( "Scale Model Mode", &interaction_mode, 5);
+		ImGui::RadioButton( "Draw Viewport Mode", &interaction_mode, 6);
 
 		ImGui::Separator();
 
-		ImGui::Text( "Interaction Mode: %s", interaction_mode.c_str() );
+		string interaction_string = "";
+		switch (interaction_mode) {
+			case 0:
+				interaction_string = "Rotate View";
+				break;
+			case 1:
+				interaction_string = "Translate View";
+				break;
+			case 2:
+				interaction_string = "Perspective";
+				break;
+			case 3:
+				interaction_string = "Rotate Model";
+				break;
+			case 4:
+				interaction_string = "Translate Model";
+				break;
+			case 5:
+				interaction_string = "Scale Model";
+				break;
+			case 6:
+				interaction_string = "Draw Viewport";
+				break;
+		}
+		ImGui::Text( "Interaction Mode: %s", interaction_string.c_str() );
 		ImGui::Text( "Near Plane Distance: %.1f", near );
 		ImGui::Text( "Far Plane Distance: %.1f", far );
 		ImGui::Text( "Field of View: %.1f degrees", (1/DEGREES_TO_RADIANS) * theta );
@@ -830,7 +840,7 @@ bool A2::mouseButtonInputEvent (
 		if (button == GLFW_MOUSE_BUTTON_LEFT && actions == GLFW_PRESS) {
 			prev_mouse_posn = vec2(ImGui::GetMousePos().x,  ImGui::GetMousePos().y);
 			dragging |= 1UL << 0;
-			if (interaction_mode == "Viewport") {
+			if (interaction_mode == 6) {
 				dragging_viewport_start = prev_mouse_posn;
 				dragging_viewport_end = dragging_viewport_start;
 			}
@@ -913,25 +923,25 @@ bool A2::keyInputEvent (
 			reset();
 			eventHandled = true;
 		} else if (key == GLFW_KEY_R) {
-			interaction_mode = "Rotate Model";
+			interaction_mode = 3;
 			eventHandled = true;
 		} else if (key == GLFW_KEY_T) {
-			interaction_mode = "Translate Model";
+			interaction_mode = 4;
 			eventHandled = true;
 		} else if (key == GLFW_KEY_S) {
-			interaction_mode = "Scale Model";
+			interaction_mode = 5;
 			eventHandled = true;
 		} else if (key == GLFW_KEY_P) {
-			interaction_mode = "Perspective";
+			interaction_mode = 2;
 			eventHandled = true;
 		} else if (key == GLFW_KEY_N) {
-			interaction_mode = "Translate View";
+			interaction_mode = 1;
 			eventHandled = true;
 		} else if (key == GLFW_KEY_O) {
-			interaction_mode = "Rotate View";
+			interaction_mode = 0;
 			eventHandled = true;
 		} else if (key == GLFW_KEY_V) {
-			interaction_mode = "Viewport";
+			interaction_mode = 6;
 			eventHandled = true;
 		}
 	}
