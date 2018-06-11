@@ -108,5 +108,5 @@ protected:
 
 	// For puppet transformations
 	glm::mat4 puppet_rotation;
-	//glm::mat4 puppet_translation;
+	glm::mat4 puppet_translation;
 };

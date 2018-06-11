@@ -43,8 +43,8 @@ A3::A3(const std::string & luaSceneFile)
 {
 	prev_mouse_posn = vec2(0,0);
 	mouse_movement = vec2(0,0);
-	puppet_rotation = mat4();
-	//puppet_translation = mat4();
+
+	resetAll();
 }
 
 //----------------------------------------------------------------------------------------
@@ -496,7 +496,7 @@ void A3::renderSceneGraph(SceneNode & root) {
 	// walk down the tree from nodes of different types.
 
 	mat4 root_transform = root.get_transform();
-	root.set_transform(root_transform * puppet_rotation);
+	root.set_transform(puppet_translation * root_transform * puppet_rotation);
 
 	for (const SceneNode * node : root.children) {
 		if (node->m_nodeType == NodeType::GeometryNode)
@@ -540,11 +540,11 @@ void A3::setRootTransform() {
 	if (interaction_mode == POSITION_MODE) {
 		if ((dragging >> 0) & 1U) {
 			// dragging by left
-			m_rootNode->translate(TRANSLATION_SPEED * vec3(mouse_movement.x, -mouse_movement.y, 0));
+			puppet_translation = translate(TRANSLATION_SPEED * vec3(mouse_movement.x, -mouse_movement.y, 0)) * puppet_translation;
 		}
 		if ((dragging >> 1) & 1U) {
 			// dragging by middle
-			m_rootNode->translate(TRANSLATION_DEPTH_SPEED * vec3(0,0,mouse_movement.y));
+			puppet_translation = translate(TRANSLATION_DEPTH_SPEED * vec3(0,0,mouse_movement.y)) * puppet_translation;
 		}
 		if ((dragging >> 2) & 1U) {
 			// dragging by right
@@ -570,12 +570,12 @@ void A3::setRootTransform() {
 
 //
 void A3::resetPosition() {
-	cout << "resetPosition" << endl;
+	puppet_translation = mat4();
 }
 
 //
 void A3::resetOrientation() {
-	cout << "resetOrientation" << endl;
+	puppet_rotation = mat4();
 }
 
 //
