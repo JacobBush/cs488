@@ -6,6 +6,7 @@
 #include "cs488-framework/MeshConsolidator.hpp"
 
 #include "SceneNode.hpp"
+#include "GeometryNode.hpp"
 
 #include <glm/glm.hpp>
 #include <memory>
@@ -48,6 +49,7 @@ protected:
 	void initPerspectiveMatrix();
 	void uploadCommonSceneUniforms();
 	void renderSceneGraph(const SceneNode &node);
+	void renderGeometryNode(GeometryNode * node, glm::mat4 parentTransform);
 	void renderArcCircle();
 
 	glm::mat4 m_perpsective;

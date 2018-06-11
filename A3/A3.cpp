@@ -394,6 +394,29 @@ void A3::draw() {
 	renderArcCircle();
 }
 
+//
+//
+void A3::renderGeometryNode(GeometryNode * root, mat4 parentTransform) {
+	mat4 oldRootTransform = root->get_transform();
+	root->set_transform(parentTransform * oldRootTransform);
+	for (const SceneNode * node : root->children) {
+		if (root->m_nodeType == NodeType::GeometryNode)
+			renderGeometryNode((GeometryNode *) node, root->get_transform());
+	}
+
+	updateShaderUniforms(m_shader, *root, m_view);
+
+
+	// Get the BatchInfo corresponding to the GeometryNode's unique MeshId.
+	BatchInfo batchInfo = m_batchInfoMap[root->meshId];
+
+	//-- Now render the mesh:
+	m_shader.enable();
+	glDrawArrays(GL_TRIANGLES, batchInfo.startIndex, batchInfo.numIndices);
+	m_shader.disable();
+	root->set_transform(oldRootTransform);
+}
+
 //----------------------------------------------------------------------------------------
 void A3::renderSceneGraph(const SceneNode & root) {
 
@@ -414,22 +437,8 @@ void A3::renderSceneGraph(const SceneNode & root) {
 	// walk down the tree from nodes of different types.
 
 	for (const SceneNode * node : root.children) {
-
-		if (node->m_nodeType != NodeType::GeometryNode)
-			continue;
-
-		const GeometryNode * geometryNode = static_cast<const GeometryNode *>(node);
-
-		updateShaderUniforms(m_shader, *geometryNode, m_view);
-
-
-		// Get the BatchInfo corresponding to the GeometryNode's unique MeshId.
-		BatchInfo batchInfo = m_batchInfoMap[geometryNode->meshId];
-
-		//-- Now render the mesh:
-		m_shader.enable();
-		glDrawArrays(GL_TRIANGLES, batchInfo.startIndex, batchInfo.numIndices);
-		m_shader.disable();
+		if (node->m_nodeType == NodeType::GeometryNode)
+			renderGeometryNode((GeometryNode *) node, root.get_transform());
 	}
 
 	glBindVertexArray(0);
