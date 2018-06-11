@@ -11,6 +11,7 @@ using namespace std;
 
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/io.hpp>
+#include <glm/gtx/transform.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
 using namespace glm;
@@ -42,6 +43,8 @@ A3::A3(const std::string & luaSceneFile)
 {
 	prev_mouse_posn = vec2(0,0);
 	mouse_movement = vec2(0,0);
+	puppet_rotation = mat4();
+	//puppet_translation = mat4();
 }
 
 //----------------------------------------------------------------------------------------
@@ -474,7 +477,7 @@ void A3::renderGeometryNode(GeometryNode * root, mat4 parentTransform) {
 }
 
 //----------------------------------------------------------------------------------------
-void A3::renderSceneGraph(const SceneNode & root) {
+void A3::renderSceneGraph(SceneNode & root) {
 
 	// Bind the VAO once here, and reuse for all GeometryNode rendering below.
 	glBindVertexArray(m_vao_meshData);
@@ -492,10 +495,15 @@ void A3::renderSceneGraph(const SceneNode & root) {
 	// could put a set of mutually recursive functions in this class, which
 	// walk down the tree from nodes of different types.
 
+	mat4 root_transform = root.get_transform();
+	root.set_transform(root_transform * puppet_rotation);
+
 	for (const SceneNode * node : root.children) {
 		if (node->m_nodeType == NodeType::GeometryNode)
 			renderGeometryNode((GeometryNode *) node, root.get_transform());
 	}
+
+	root.set_transform(root_transform);
 
 	glBindVertexArray(0);
 	CHECK_GL_ERRORS;
@@ -525,7 +533,7 @@ void A3::renderArcCircle() {
 
 //
 void A3::setRootTransform() {
-	const float ROTATION_SPEED = 0.0015f;
+	const float ROTATION_SPEED = 0.01f;
 	const float TRANSLATION_SPEED = 0.0015f;
 	const float TRANSLATION_DEPTH_SPEED = 0.0015f;
 
@@ -540,6 +548,8 @@ void A3::setRootTransform() {
 		}
 		if ((dragging >> 2) & 1U) {
 			// dragging by right
+			puppet_rotation = rotate(ROTATION_SPEED * mouse_movement.x, vec3(0,1,0)) * puppet_rotation;
+			puppet_rotation = rotate(ROTATION_SPEED * mouse_movement.y, vec3(1,0,0)) * puppet_rotation;
 		}
 		mouse_movement = vec2(0.0f,0.0f);
 	} 

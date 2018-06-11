@@ -48,7 +48,7 @@ protected:
 
 	void initPerspectiveMatrix();
 	void uploadCommonSceneUniforms();
-	void renderSceneGraph(const SceneNode &node);
+	void renderSceneGraph(SceneNode &node);
 	void renderGeometryNode(GeometryNode * node, glm::mat4 parentTransform);
 	void renderArcCircle();
 
@@ -105,4 +105,8 @@ protected:
 	char dragging;
 	glm::vec2 prev_mouse_posn;
 	glm::vec2 mouse_movement;
+
+	// For puppet transformations
+	glm::mat4 puppet_rotation;
+	//glm::mat4 puppet_translation;
 };
