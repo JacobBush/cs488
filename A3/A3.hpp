@@ -52,6 +52,12 @@ protected:
 	void renderGeometryNode(GeometryNode * node, glm::mat4 parentTransform);
 	void renderArcCircle();
 
+	// reset functions
+	void resetPosition();
+	void resetOrientation();
+	void resetJoints();
+	void resetAll();
+
 	glm::mat4 m_perpsective;
 	glm::mat4 m_view;
 

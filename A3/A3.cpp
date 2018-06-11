@@ -319,12 +319,32 @@ void A3::guiLogic()
 	}
 
 	static bool showDebugWindow(true);
-	ImGuiWindowFlags windowFlags(ImGuiWindowFlags_AlwaysAutoResize);
+	ImGuiWindowFlags windowFlags(ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_MenuBar);
+
 	float opacity(0.5f);
 
 	ImGui::Begin("Properties", &showDebugWindow, ImVec2(100,100), opacity,
 			windowFlags);
 
+		if (ImGui::BeginMenuBar())
+		{
+		    if (ImGui::BeginMenu("File"))
+		    {
+		        ImGui::EndMenu();
+		    }
+		    if (ImGui::BeginMenu("Edit"))
+		    {
+		        if (ImGui::MenuItem("Undo", "CTRL+Z")) {}
+		        if (ImGui::MenuItem("Redo", "CTRL+Y", false, false)) {}  // Disabled item
+		        ImGui::Separator();
+		        if (ImGui::MenuItem("Cut", "CTRL+X")) {}
+		        if (ImGui::MenuItem("Copy", "CTRL+C")) {}
+		        if (ImGui::MenuItem("Paste", "CTRL+V")) {}
+		        ImGui::EndMenu();
+		    }
+		    ImGui::EndMenuBar();
+		}
+	    
 
 		// Add more gui elements here here ...
 
@@ -332,6 +352,18 @@ void A3::guiLogic()
 		// Create Button, and check if it was clicked:
 		if( ImGui::Button( "Quit Application" ) ) {
 			glfwSetWindowShouldClose(m_window, GL_TRUE);
+		}
+		if( ImGui::Button( "Reset Position" ) ) {
+			resetPosition();
+		}
+		if( ImGui::Button( "Reset Orientation" ) ) {
+			resetOrientation();
+		}
+		if( ImGui::Button( "Reset Joints" ) ) {
+			resetJoints();
+		}
+		if( ImGui::Button( "Reset All" ) ) {
+			resetAll();
 		}
 
 		ImGui::Text( "Framerate: %.1f FPS", ImGui::GetIO().Framerate );
@@ -467,6 +499,28 @@ void A3::renderArcCircle() {
 	CHECK_GL_ERRORS;
 }
 
+//
+void A3::resetPosition() {
+	cout << "resetPosition" << endl;
+}
+
+//
+void A3::resetOrientation() {
+	cout << "resetOrientation" << endl;
+}
+
+//
+void A3::resetJoints() {
+	cout << "resetJoints" << endl;
+}
+
+//
+void A3::resetAll() {
+	resetPosition();
+	resetOrientation();
+	resetJoints();
+}
+
 //----------------------------------------------------------------------------------------
 /*
  * Called once, after program is signaled to terminate.
@@ -563,6 +617,21 @@ bool A3::keyInputEvent (
 	if( action == GLFW_PRESS ) {
 		if( key == GLFW_KEY_M ) {
 			show_gui = !show_gui;
+			eventHandled = true;
+		} else if ( key == GLFW_KEY_Q ) {
+			glfwSetWindowShouldClose(m_window, GL_TRUE);
+			eventHandled = true;
+		} else if ( key == GLFW_KEY_I ) {
+			resetPosition();
+			eventHandled = true;
+		} else if ( key == GLFW_KEY_O ) {
+			resetOrientation();
+			eventHandled = true;
+		} else if ( key == GLFW_KEY_N ) {
+			resetJoints();
+			eventHandled = true;
+		} else if ( key == GLFW_KEY_A ) {
+			resetAll();
 			eventHandled = true;
 		}
 	}
