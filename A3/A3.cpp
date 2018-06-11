@@ -527,6 +527,7 @@ void A3::renderArcCircle() {
 void A3::setRootTransform() {
 	const float ROTATION_SPEED = 0.0015f;
 	const float TRANSLATION_SPEED = 0.0015f;
+	const float TRANSLATION_DEPTH_SPEED = 0.0015f;
 
 	if (interaction_mode == POSITION_MODE) {
 		if ((dragging >> 0) & 1U) {
@@ -535,6 +536,7 @@ void A3::setRootTransform() {
 		}
 		if ((dragging >> 1) & 1U) {
 			// dragging by middle
+			m_rootNode->translate(TRANSLATION_DEPTH_SPEED * vec3(0,0,mouse_movement.y));
 		}
 		if ((dragging >> 2) & 1U) {
 			// dragging by right
