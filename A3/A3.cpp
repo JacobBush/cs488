@@ -37,9 +37,11 @@ A3::A3(const std::string & luaSceneFile)
 	  use_z_buffer(true),
 	  use_frontface_culling(false),
 	  use_backface_culling(false),
-	  interaction_mode(0)
+	  interaction_mode(0),
+	  dragging(0)
 {
-
+	prev_mouse_posn = vec2(0,0);
+	mouse_movement = vec2(0,0);
 }
 
 //----------------------------------------------------------------------------------------
@@ -437,6 +439,7 @@ void A3::draw() {
 	if (use_backface_culling && !use_frontface_culling) glCullFace(GL_BACK);
 	if (!use_backface_culling && use_frontface_culling) glCullFace(GL_FRONT);
 	
+	setRootTransform();
 	renderSceneGraph(*m_rootNode);
 
 	if (draw_circle) {
@@ -521,6 +524,39 @@ void A3::renderArcCircle() {
 }
 
 //
+void A3::setRootTransform() {
+	const float ROTATION_SPEED = 0.0015f;
+	const float TRANSLATION_SPEED = 0.0015f;
+
+	if (interaction_mode == POSITION_MODE) {
+		if ((dragging >> 0) & 1U) {
+			// dragging by left
+			m_rootNode->translate(TRANSLATION_SPEED * vec3(mouse_movement.x, -mouse_movement.y, 0));
+		}
+		if ((dragging >> 1) & 1U) {
+			// dragging by middle
+		}
+		if ((dragging >> 2) & 1U) {
+			// dragging by right
+		}
+		mouse_movement = vec2(0.0f,0.0f);
+	} 
+
+	if (interaction_mode == JOINTS_MODE) {
+		if ((dragging >> 0) & 1U) {
+			// dragging by left
+		}
+		if ((dragging >> 1) & 1U) {
+			// dragging by middle
+		}
+		if ((dragging >> 2) & 1U) {
+			// dragging by right
+		}
+		mouse_movement = vec2(0.0f,0.0f);
+	}
+}
+
+//
 void A3::resetPosition() {
 	cout << "resetPosition" << endl;
 }
@@ -585,7 +621,14 @@ bool A3::mouseMoveEvent (
 ) {
 	bool eventHandled(false);
 
-	// Fill in with event handling code...
+	if (!ImGui::IsMouseHoveringAnyWindow()) {
+		if (dragging) {
+			mouse_movement.x += xPos - prev_mouse_posn.x;
+			mouse_movement.y += yPos - prev_mouse_posn.y;
+			prev_mouse_posn = vec2(xPos, yPos);
+			eventHandled = true;
+		}
+	}
 
 	return eventHandled;
 }
@@ -601,7 +644,36 @@ bool A3::mouseButtonInputEvent (
 ) {
 	bool eventHandled(false);
 
-	// Fill in with event handling code...
+	// dragging is 3 bits right|middle|left
+	if (!ImGui::IsMouseHoveringAnyWindow()) {
+		if (button == GLFW_MOUSE_BUTTON_LEFT && actions == GLFW_PRESS) {
+			prev_mouse_posn = vec2(ImGui::GetMousePos().x,  ImGui::GetMousePos().y);
+			dragging |= 1UL << 0;
+			eventHandled = true;
+		}
+		if (button == GLFW_MOUSE_BUTTON_LEFT && actions == GLFW_RELEASE) {
+			dragging &= ~(1UL << 0);
+			eventHandled = true;
+		}
+		if (button == GLFW_MOUSE_BUTTON_MIDDLE && actions == GLFW_PRESS) {
+			prev_mouse_posn = vec2(ImGui::GetMousePos().x,  ImGui::GetMousePos().y);
+			dragging |= 1UL << 1;
+			eventHandled = true;
+		}
+		if (button == GLFW_MOUSE_BUTTON_MIDDLE && actions == GLFW_RELEASE) {
+			dragging &= ~(1UL << 1);
+			eventHandled = true;
+		}
+		if (button == GLFW_MOUSE_BUTTON_RIGHT && actions == GLFW_PRESS) {
+			prev_mouse_posn = vec2(ImGui::GetMousePos().x,  ImGui::GetMousePos().y);
+			dragging |= 1UL << 2;
+			eventHandled = true;
+		}
+		if (button == GLFW_MOUSE_BUTTON_RIGHT && actions == GLFW_RELEASE) {
+			dragging &= ~(1UL << 2);
+			eventHandled = true;
+		}
+	}
 
 	return eventHandled;
 }

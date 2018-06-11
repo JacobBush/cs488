@@ -61,6 +61,9 @@ protected:
 	void undo();
 	void redo();
 
+	//
+	void setRootTransform();
+
 	glm::mat4 m_perpsective;
 	glm::mat4 m_view;
 
@@ -97,4 +100,9 @@ protected:
 
 	//
 	int interaction_mode;
+
+	// 3 bits for mouse buttons right|middle|left
+	char dragging;
+	glm::vec2 prev_mouse_posn;
+	glm::vec2 mouse_movement;
 };
