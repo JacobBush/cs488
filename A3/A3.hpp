@@ -57,6 +57,9 @@ protected:
 	void resetOrientation();
 	void resetJoints();
 	void resetAll();
+	// Undo
+	void undo();
+	void redo();
 
 	glm::mat4 m_perpsective;
 	glm::mat4 m_view;
@@ -85,4 +88,13 @@ protected:
 	std::string m_luaSceneFile;
 
 	std::shared_ptr<SceneNode> m_rootNode;
+
+	// Options
+	bool draw_circle;
+	bool use_z_buffer;
+	bool use_frontface_culling;
+	bool use_backface_culling;
+
+	//
+	int interaction_mode;
 };

@@ -19,6 +19,9 @@ static bool show_gui = true;
 
 const size_t CIRCLE_PTS = 48;
 
+const int POSITION_MODE = 0;
+const int JOINTS_MODE = 1;
+
 //----------------------------------------------------------------------------------------
 // Constructor
 A3::A3(const std::string & luaSceneFile)
@@ -29,7 +32,12 @@ A3::A3(const std::string & luaSceneFile)
 	  m_vbo_vertexPositions(0),
 	  m_vbo_vertexNormals(0),
 	  m_vao_arcCircle(0),
-	  m_vbo_arcCircle(0)
+	  m_vbo_arcCircle(0),
+	  draw_circle(false),
+	  use_z_buffer(true),
+	  use_frontface_culling(false),
+	  use_backface_culling(false),
+	  interaction_mode(0)
 {
 
 }
@@ -328,43 +336,48 @@ void A3::guiLogic()
 
 		if (ImGui::BeginMenuBar())
 		{
-		    if (ImGui::BeginMenu("File"))
+		    if (ImGui::BeginMenu("Application"))
 		    {
+				if( ImGui::MenuItem( "Reset Position", "I" ) ) {
+					resetPosition();
+				}
+				if( ImGui::MenuItem( "Reset Orientation", "O" ) ) {
+					resetOrientation();
+				}
+				if( ImGui::MenuItem( "Reset Joints", "N" ) ) {
+					resetJoints();
+				}
+				if( ImGui::MenuItem( "Reset All", "A" ) ) {
+					resetAll();
+				}
+				if( ImGui::MenuItem( "Quit Application", "Q" ) ) {
+					glfwSetWindowShouldClose(m_window, GL_TRUE);
+				}
 		        ImGui::EndMenu();
 		    }
 		    if (ImGui::BeginMenu("Edit"))
 		    {
-		        if (ImGui::MenuItem("Undo", "CTRL+Z")) {}
-		        if (ImGui::MenuItem("Redo", "CTRL+Y", false, false)) {}  // Disabled item
-		        ImGui::Separator();
-		        if (ImGui::MenuItem("Cut", "CTRL+X")) {}
-		        if (ImGui::MenuItem("Copy", "CTRL+C")) {}
-		        if (ImGui::MenuItem("Paste", "CTRL+V")) {}
+		        if (ImGui::MenuItem("Undo", "U")) {
+		        	undo();
+		        }
+		        if (ImGui::MenuItem("Redo", "R")) {
+		        	redo();
+		        }
+		        ImGui::EndMenu();
+		    }
+		    if (ImGui::BeginMenu("Options"))
+		    {
+		    	if (ImGui::MenuItem("Circle", "C", &draw_circle)) {}
+		    	if (ImGui::MenuItem("Z-buffer", "Z", &use_z_buffer)) {}
+		    	if (ImGui::MenuItem("Backface culling", "B", &use_backface_culling)) {}
+		    	if (ImGui::MenuItem("Frontface culling", "F", &use_frontface_culling)) {}
 		        ImGui::EndMenu();
 		    }
 		    ImGui::EndMenuBar();
 		}
-	    
 
-		// Add more gui elements here here ...
-
-
-		// Create Button, and check if it was clicked:
-		if( ImGui::Button( "Quit Application" ) ) {
-			glfwSetWindowShouldClose(m_window, GL_TRUE);
-		}
-		if( ImGui::Button( "Reset Position" ) ) {
-			resetPosition();
-		}
-		if( ImGui::Button( "Reset Orientation" ) ) {
-			resetOrientation();
-		}
-		if( ImGui::Button( "Reset Joints" ) ) {
-			resetJoints();
-		}
-		if( ImGui::Button( "Reset All" ) ) {
-			resetAll();
-		}
+		ImGui::RadioButton( "Position / Orientation", &interaction_mode, POSITION_MODE);
+		ImGui::RadioButton( "Joints", &interaction_mode, JOINTS_MODE);
 
 		ImGui::Text( "Framerate: %.1f FPS", ImGui::GetIO().Framerate );
 
@@ -418,12 +431,20 @@ static void updateShaderUniforms(
  */
 void A3::draw() {
 
-	glEnable( GL_DEPTH_TEST );
+	if (use_z_buffer) glEnable( GL_DEPTH_TEST );
+	if (use_backface_culling || use_frontface_culling) glEnable( GL_CULL_FACE );
+	if (use_backface_culling && use_frontface_culling) glCullFace(GL_FRONT_AND_BACK);
+	if (use_backface_culling && !use_frontface_culling) glCullFace(GL_BACK);
+	if (!use_backface_culling && use_frontface_culling) glCullFace(GL_FRONT);
+	
 	renderSceneGraph(*m_rootNode);
 
+	if (draw_circle) {
+		renderArcCircle();
+	}
 
 	glDisable( GL_DEPTH_TEST );
-	renderArcCircle();
+	glDisable( GL_CULL_FACE );
 }
 
 //
@@ -519,6 +540,16 @@ void A3::resetAll() {
 	resetPosition();
 	resetOrientation();
 	resetJoints();
+}
+
+//
+void A3::undo() {
+	cout << "undo" << endl;
+}
+
+//
+void A3::redo() {
+	cout << "redo" << endl;
 }
 
 //----------------------------------------------------------------------------------------
@@ -632,6 +663,24 @@ bool A3::keyInputEvent (
 			eventHandled = true;
 		} else if ( key == GLFW_KEY_A ) {
 			resetAll();
+			eventHandled = true;
+		} else if ( key == GLFW_KEY_U ) {
+			undo();
+			eventHandled = true;
+		} else if ( key == GLFW_KEY_R ) {
+			redo();
+			eventHandled = true;
+		} else if ( key == GLFW_KEY_C ) {
+			draw_circle = !draw_circle;
+			eventHandled = true;
+		} else if ( key == GLFW_KEY_Z ) {
+			use_z_buffer = !use_z_buffer;
+			eventHandled = true;
+		} else if ( key == GLFW_KEY_B ) {
+			use_backface_culling = !use_backface_culling;
+			eventHandled = true;
+		} else if ( key == GLFW_KEY_F ) {
+			use_frontface_culling = !use_frontface_culling;
 			eventHandled = true;
 		}
 	}
