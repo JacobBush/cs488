@@ -40,7 +40,8 @@ A3::A3(const std::string & luaSceneFile)
 	  use_frontface_culling(false),
 	  use_backface_culling(false),
 	  interaction_mode(0),
-	  dragging(0)
+	  dragging(0),
+	  picking(false)
 {
 	prev_mouse_posn = vec2(0,0);
 	mouse_movement = vec2(0,0);
@@ -284,8 +285,11 @@ void A3::uploadCommonSceneUniforms() {
 		glUniformMatrix4fv(location, 1, GL_FALSE, value_ptr(m_perpsective));
 		CHECK_GL_ERRORS;
 
+		location = m_shader.getUniformLocation("picking");
+		glUniform1i( location, picking ? 1 : 0 );
 
 		//-- Set LightSource uniform for the scene:
+		if (!picking)
 		{
 			location = m_shader.getUniformLocation("light.position");
 			glUniform3fv(location, 1, value_ptr(m_light.position));
@@ -295,6 +299,7 @@ void A3::uploadCommonSceneUniforms() {
 		}
 
 		//-- Set background light ambient intensity
+		if (!picking)
 		{
 			location = m_shader.getUniformLocation("ambientIntensity");
 			vec3 ambientIntensity(0.05f);
@@ -395,7 +400,8 @@ void A3::guiLogic()
 static void updateShaderUniforms(
 		const ShaderProgram & shader,
 		const GeometryNode & node,
-		const glm::mat4 & viewMatrix
+		const glm::mat4 & viewMatrix,
+		const bool & picking
 ) {
 
 	shader.enable();
@@ -406,29 +412,40 @@ static void updateShaderUniforms(
 		glUniformMatrix4fv(location, 1, GL_FALSE, value_ptr(modelView));
 		CHECK_GL_ERRORS;
 
-		//-- Set NormMatrix:
-		location = shader.getUniformLocation("NormalMatrix");
-		mat3 normalMatrix = glm::transpose(glm::inverse(mat3(modelView)));
-		glUniformMatrix3fv(location, 1, GL_FALSE, value_ptr(normalMatrix));
-		CHECK_GL_ERRORS;
-
-
 		//-- Set Material values:
-		location = shader.getUniformLocation("material.kd");
-		vec3 kd = node.material.kd;
-		glUniform3fv(location, 1, value_ptr(kd));
-		CHECK_GL_ERRORS;
-		location = shader.getUniformLocation("material.ks");
-		vec3 ks = node.material.ks;
-		glUniform3fv(location, 1, value_ptr(ks));
-		CHECK_GL_ERRORS;
-		location = shader.getUniformLocation("material.shininess");
-		glUniform1f(location, node.material.shininess);
-		CHECK_GL_ERRORS;
+		if (picking) {
+			float r = float(node.m_nodeId&0xff) / 255.0f;
+			float g = float((node.m_nodeId>>8)&0xff) / 255.0f;
+			float b = float((node.m_nodeId>>16)&0xff) / 255.0f;
+
+			//cout << "drawing r: " << r << ", g: " << g << ", b: " << b;
+			//cout << "for node: " << node.m_name << ", ID: " << node.m_nodeId << endl;
+
+			location = shader.getUniformLocation("material.kd");
+			glUniform3f( location, r, g, b );
+			CHECK_GL_ERRORS;
+		} else {
+			//-- Set NormMatrix:
+			location = shader.getUniformLocation("NormalMatrix");
+			mat3 normalMatrix = glm::transpose(glm::inverse(mat3(modelView)));
+			glUniformMatrix3fv(location, 1, GL_FALSE, value_ptr(normalMatrix));
+			CHECK_GL_ERRORS;
+
+			location = shader.getUniformLocation("material.kd");
+			vec3 kd = node.material.kd;
+			glUniform3fv(location, 1, value_ptr(kd));
+			CHECK_GL_ERRORS;
+			location = shader.getUniformLocation("material.ks");
+			vec3 ks = node.material.ks;
+			glUniform3fv(location, 1, value_ptr(ks));
+			CHECK_GL_ERRORS;
+			location = shader.getUniformLocation("material.shininess");
+			glUniform1f(location, node.material.shininess);
+			CHECK_GL_ERRORS;		
+		}
 
 	}
 	shader.disable();
-
 }
 
 //----------------------------------------------------------------------------------------
@@ -490,7 +507,7 @@ void A3::renderGeometryNode(GeometryNode * node) {
 	}
 
 
-	updateShaderUniforms(m_shader, *node, m_view);
+	updateShaderUniforms(m_shader, *node, m_view, picking);
 
 
 	// Get the BatchInfo corresponding to the GeometryNode's unique MeshId.
@@ -553,6 +570,79 @@ void A3::renderArcCircle() {
 
 	glBindVertexArray(0);
 	CHECK_GL_ERRORS;
+}
+
+void A3::dealWithPicking() {
+	if (interaction_mode != JOINTS_MODE) return;
+
+	// Just going to copy code for pulling xpos and ypos instead
+	// of using my already defined prev_mouse_posn
+	// This way I will know that picking is working
+	double xpos, ypos;
+	glfwGetCursorPos( m_window, &xpos, &ypos );
+
+	picking = true;
+
+	// most of this will be pulled from PickingExample.cpp
+	uploadCommonSceneUniforms();
+	glClearColor(1.0, 1.0, 1.0, 1.0 );
+	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+	glClearColor(0.35, 0.35, 0.35, 1.0);
+
+	draw();
+	CHECK_GL_ERRORS;
+
+	// Ugly -- FB coordinates might be different than Window coordinates
+	// (e.g., on a retina display).  Must compensate.
+	xpos *= double(m_framebufferWidth) / double(m_windowWidth);
+	// WTF, don't know why I have to measure y relative to the bottom of
+	// the window in this case.
+	ypos = m_windowHeight - ypos;
+	ypos *= double(m_framebufferHeight) / double(m_windowHeight);
+
+	//cout << "picking: (" << xpos << ", " << ypos << ")" << endl;
+
+	GLubyte buffer[ 4 ] = { 0, 0, 0, 0 };
+	// A bit ugly -- don't want to swap the just-drawn false colours
+	// to the screen, so read from the back buffer.
+	glReadBuffer( GL_BACK );
+	// Actually read the pixel at the mouse location.
+	glReadPixels( int(xpos), int(ypos), 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, buffer );
+	CHECK_GL_ERRORS;
+
+	//cout << "buffer: " << int(buffer[0]) << ", " << int(buffer[1]) << ", " <<int(buffer[2]) << ", " <<int(buffer[3]) <<endl;
+
+	// Reassemble the object ID.
+	unsigned int node_id = buffer[0] + (buffer[1] << 8) + (buffer[2] << 16);
+
+	selectNode(node_id);
+
+	picking = false;
+
+	CHECK_GL_ERRORS;
+}
+
+SceneNode * recursiveSearchForNode(unsigned int node_id, SceneNode *current_node) {
+	//cout << "Current node ID being checked: " << current_node->m_nodeId << ", with name: " << current_node->m_name << endl;
+	if (current_node->m_nodeId == node_id) {
+		return current_node;
+	}
+	for (SceneNode * node : current_node->children) {
+		current_node = recursiveSearchForNode(node_id, node);
+		if (current_node != NULL) {
+			return current_node;
+		}
+	}
+	return NULL;
+}
+
+void A3::selectNode(unsigned int node_id) {
+	//cout << "picking node : " << node_id << endl;
+
+	SceneNode *current_node = m_rootNode.get();
+	current_node = recursiveSearchForNode(node_id, current_node);
+	if (current_node == NULL) return;
+	cout << "Picked node " << current_node->m_name << endl;
 }
 
 //
@@ -685,6 +775,7 @@ bool A3::mouseButtonInputEvent (
 		if (button == GLFW_MOUSE_BUTTON_LEFT && actions == GLFW_PRESS) {
 			prev_mouse_posn = vec2(ImGui::GetMousePos().x,  ImGui::GetMousePos().y);
 			dragging |= 1UL << 0;
+			dealWithPicking();
 			eventHandled = true;
 		}
 		if (button == GLFW_MOUSE_BUTTON_LEFT && actions == GLFW_RELEASE) {

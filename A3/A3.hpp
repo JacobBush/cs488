@@ -67,6 +67,10 @@ protected:
 
 	//
 	void dealWithManipulation();
+	void dealWithPicking();
+
+	//
+	void selectNode(unsigned int node_id);
 
 	glm::mat4 m_perpsective;
 	glm::mat4 m_view;
@@ -109,6 +113,9 @@ protected:
 	char dragging;
 	glm::vec2 prev_mouse_posn;
 	glm::vec2 mouse_movement;
+
+	// true if previous mouse position was an attempt to pick
+	bool picking;
 
 	// For puppet transformations
 	glm::mat4 puppet_rotation;
