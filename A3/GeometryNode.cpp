@@ -1,4 +1,5 @@
 #include "GeometryNode.hpp"
+#include "JointNode.hpp"
 
 //---------------------------------------------------------------------------------------
 GeometryNode::GeometryNode(
@@ -9,4 +10,10 @@ GeometryNode::GeometryNode(
 	  meshId(meshId)
 {
 	m_nodeType = NodeType::GeometryNode;
+}
+
+bool GeometryNode::parentJointIsSelected () {
+	if (parent->m_nodeType != NodeType::JointNode) return false;
+	if (!((JointNode *)parent)->picked) return false;
+	return true;
 }

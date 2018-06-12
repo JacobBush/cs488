@@ -9,6 +9,8 @@ public:
 		const std::string & name
 	);
 
+	bool parentJointIsSelected();
+
 	Material material;
 
 	// Mesh Identifier. This must correspond to an object name of

@@ -401,8 +401,14 @@ static void updateShaderUniforms(
 		const ShaderProgram & shader,
 		const GeometryNode & node,
 		const glm::mat4 & viewMatrix,
-		const bool & picking
+		const bool & picking,
+		const bool & picked
 ) {
+
+	static Material picked_material;
+	picked_material.kd = vec3(0.0f, 1.0f, 1.0f);
+	picked_material.ks = vec3(0.1f, 0.1f, 0.1f);
+	picked_material.shininess = 10.0f;
 
 	shader.enable();
 	{
@@ -432,15 +438,16 @@ static void updateShaderUniforms(
 			CHECK_GL_ERRORS;
 
 			location = shader.getUniformLocation("material.kd");
-			vec3 kd = node.material.kd;
+			vec3 kd = picked ? picked_material.kd : node.material.kd;
 			glUniform3fv(location, 1, value_ptr(kd));
 			CHECK_GL_ERRORS;
 			location = shader.getUniformLocation("material.ks");
-			vec3 ks = node.material.ks;
+			vec3 ks = picked ? picked_material.ks : node.material.ks;
 			glUniform3fv(location, 1, value_ptr(ks));
 			CHECK_GL_ERRORS;
 			location = shader.getUniformLocation("material.shininess");
-			glUniform1f(location, node.material.shininess);
+			float shininess = picked ? picked_material.shininess : node.material.shininess;
+			glUniform1f(location, shininess);
 			CHECK_GL_ERRORS;		
 		}
 
@@ -498,17 +505,7 @@ void A3::renderGeometryNode(GeometryNode * node) {
 	node->set_transform(node->parent->get_transform() * oldNodeTransform);
 	renderChildren(node->children);
 
-	// If picked, render differently
-	if (node->parent->m_nodeType == NodeType::JointNode) {
-		JointNode *parent_joint_node = (JointNode *)(node->parent);
-		if (parent_joint_node->picked) {
-			cout << "parent of " << node->m_name << " (" << parent_joint_node->m_name << ") is picked." << endl;
-		}
-	}
-
-
-	updateShaderUniforms(m_shader, *node, m_view, picking);
-
+	updateShaderUniforms(m_shader, *node, m_view, picking, node->parentJointIsSelected());
 
 	// Get the BatchInfo corresponding to the GeometryNode's unique MeshId.
 	BatchInfo batchInfo = m_batchInfoMap[node->meshId];
@@ -639,10 +636,15 @@ SceneNode * recursiveSearchForNode(unsigned int node_id, SceneNode *current_node
 void A3::selectNode(unsigned int node_id) {
 	//cout << "picking node : " << node_id << endl;
 
-	SceneNode *current_node = m_rootNode.get();
-	current_node = recursiveSearchForNode(node_id, current_node);
-	if (current_node == NULL) return;
-	cout << "Picked node " << current_node->m_name << endl;
+	SceneNode *node = recursiveSearchForNode(node_id, m_rootNode.get());
+	if (node == NULL) return;
+	cout << "Picked node " << node->m_name << endl;
+
+	// If parent is a joint, we want to "pick" that joint
+	if (node->parent->m_nodeType == NodeType::JointNode) {
+		JointNode *parent_joint_node = (JointNode *)(node->parent);
+		parent_joint_node->picked = !parent_joint_node->picked;
+	}
 }
 
 //
