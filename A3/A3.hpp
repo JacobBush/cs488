@@ -7,7 +7,9 @@
 
 #include "SceneNode.hpp"
 #include "GeometryNode.hpp"
+#include "JointNode.hpp"
 
+#include <list>
 #include <glm/glm.hpp>
 #include <memory>
 
@@ -49,7 +51,9 @@ protected:
 	void initPerspectiveMatrix();
 	void uploadCommonSceneUniforms();
 	void renderSceneGraph(SceneNode &node);
-	void renderGeometryNode(GeometryNode * node, glm::mat4 parentTransform);
+	void renderChildren(std::list<SceneNode*> children);
+	void renderGeometryNode(GeometryNode * node);
+	void renderJointNode(JointNode * node);
 	void renderArcCircle();
 
 	// reset functions
@@ -62,7 +66,7 @@ protected:
 	void redo();
 
 	//
-	void setRootTransform();
+	void dealWithManipulation();
 
 	glm::mat4 m_perpsective;
 	glm::mat4 m_view;
@@ -109,4 +113,8 @@ protected:
 	// For puppet transformations
 	glm::mat4 puppet_rotation;
 	glm::mat4 puppet_translation;
+
+
+	//
+	//std::list<JointNode*> selectedJoints;
 };

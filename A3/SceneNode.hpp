@@ -48,6 +48,7 @@ public:
     glm::mat4 invtrans;
     
     std::list<SceneNode*> children;
+    SceneNode *parent;
 
 	NodeType m_nodeType;
 	std::string m_name;

@@ -9,6 +9,7 @@ using namespace std;
 
 #include <imgui/imgui.h>
 
+#include <list>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/io.hpp>
 #include <glm/gtx/transform.hpp>
@@ -442,7 +443,7 @@ void A3::draw() {
 	if (use_backface_culling && !use_frontface_culling) glCullFace(GL_BACK);
 	if (!use_backface_culling && use_frontface_culling) glCullFace(GL_FRONT);
 	
-	setRootTransform();
+	dealWithManipulation();
 	renderSceneGraph(*m_rootNode);
 
 	if (draw_circle) {
@@ -453,27 +454,43 @@ void A3::draw() {
 	glDisable( GL_CULL_FACE );
 }
 
-//
-//
-void A3::renderGeometryNode(GeometryNode * root, mat4 parentTransform) {
-	mat4 oldRootTransform = root->get_transform();
-	root->set_transform(parentTransform * oldRootTransform);
-	for (const SceneNode * node : root->children) {
-		if (root->m_nodeType == NodeType::GeometryNode)
-			renderGeometryNode((GeometryNode *) node, root->get_transform());
-	}
 
-	updateShaderUniforms(m_shader, *root, m_view);
+//
+void A3::renderChildren(list<SceneNode*> children) {
+	for (const SceneNode * node : children) {
+		if (node->m_nodeType == NodeType::GeometryNode)
+			renderGeometryNode((GeometryNode *) node);
+		else if (node->m_nodeType == NodeType::JointNode)
+			renderJointNode((JointNode *) node);
+	}
+}
+
+//
+void A3::renderJointNode(JointNode * node) {
+	mat4 oldNodeTransform = node->get_transform();
+	node->set_transform(node->parent->get_transform() * oldNodeTransform);
+	renderChildren(node->children);
+	node->set_transform(oldNodeTransform);
+}
+
+//
+//
+void A3::renderGeometryNode(GeometryNode * node) {
+	mat4 oldNodeTransform = node->get_transform();
+	node->set_transform(node->parent->get_transform() * oldNodeTransform);
+	renderChildren(node->children);
+
+	updateShaderUniforms(m_shader, *node, m_view);
 
 
 	// Get the BatchInfo corresponding to the GeometryNode's unique MeshId.
-	BatchInfo batchInfo = m_batchInfoMap[root->meshId];
+	BatchInfo batchInfo = m_batchInfoMap[node->meshId];
 
 	//-- Now render the mesh:
 	m_shader.enable();
 	glDrawArrays(GL_TRIANGLES, batchInfo.startIndex, batchInfo.numIndices);
 	m_shader.disable();
-	root->set_transform(oldRootTransform);
+	node->set_transform(oldNodeTransform);
 }
 
 //----------------------------------------------------------------------------------------
@@ -498,10 +515,7 @@ void A3::renderSceneGraph(SceneNode & root) {
 	mat4 root_transform = root.get_transform();
 	root.set_transform(puppet_translation * root_transform * puppet_rotation);
 
-	for (const SceneNode * node : root.children) {
-		if (node->m_nodeType == NodeType::GeometryNode)
-			renderGeometryNode((GeometryNode *) node, root.get_transform());
-	}
+	renderChildren(root.children);
 
 	root.set_transform(root_transform);
 
@@ -532,7 +546,7 @@ void A3::renderArcCircle() {
 }
 
 //
-void A3::setRootTransform() {
+void A3::dealWithManipulation() {
 	const float ROTATION_SPEED = 0.01f;
 	const float TRANSLATION_SPEED = 0.0015f;
 	const float TRANSLATION_DEPTH_SPEED = 0.0015f;
@@ -765,6 +779,12 @@ bool A3::keyInputEvent (
 			eventHandled = true;
 		} else if ( key == GLFW_KEY_F ) {
 			use_frontface_culling = !use_frontface_culling;
+			eventHandled = true;
+		} else if ( key == GLFW_KEY_P ) {
+			interaction_mode = POSITION_MODE;
+			eventHandled = true;
+		} else if ( key == GLFW_KEY_J ) {
+			interaction_mode = JOINTS_MODE;
 			eventHandled = true;
 		}
 	}

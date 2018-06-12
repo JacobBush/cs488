@@ -2,7 +2,7 @@
 
 //---------------------------------------------------------------------------------------
 JointNode::JointNode(const std::string& name)
-	: SceneNode(name)
+	: SceneNode(name), picked(false)
 {
 	m_nodeType = NodeType::JointNode;
 }
