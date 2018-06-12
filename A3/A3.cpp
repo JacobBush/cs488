@@ -458,6 +458,7 @@ void A3::draw() {
 //
 void A3::renderChildren(list<SceneNode*> children) {
 	for (const SceneNode * node : children) {
+		//cout << "parent of " << node->m_name << " is " << node->parent->m_name << endl;
 		if (node->m_nodeType == NodeType::GeometryNode)
 			renderGeometryNode((GeometryNode *) node);
 		else if (node->m_nodeType == NodeType::JointNode)
@@ -479,6 +480,15 @@ void A3::renderGeometryNode(GeometryNode * node) {
 	mat4 oldNodeTransform = node->get_transform();
 	node->set_transform(node->parent->get_transform() * oldNodeTransform);
 	renderChildren(node->children);
+
+	// If picked, render differently
+	if (node->parent->m_nodeType == NodeType::JointNode) {
+		JointNode *parent_joint_node = (JointNode *)(node->parent);
+		if (parent_joint_node->picked) {
+			cout << "parent of " << node->m_name << " (" << parent_joint_node->m_name << ") is picked." << endl;
+		}
+	}
+
 
 	updateShaderUniforms(m_shader, *node, m_view);
 
