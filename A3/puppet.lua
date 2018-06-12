@@ -97,20 +97,20 @@ leftForearm:set_material(red)
 
 leftWrist = gr.mesh('sphere', 'leftWrist')
 leftForearm:add_child(leftWrist)
-leftWrist:rotate('z', -80);
+leftWrist:rotate('y', -80);
 leftWrist:scale(1.0/0.4,1.0/0.1,1.0/0.1)
 leftWrist:scale(0.08,0.08,0.08)
 leftWrist:translate(-0.4, 0.0, 0.0)
 leftWrist:set_material(blue)
 
-left_wrist_hand = gr.joint('left_wrist_hand', {-1.0,0,1.0}, {0,0,0})
+left_wrist_hand = gr.joint('left_wrist_hand', {0,0,0}, {-1.0,0,1.0})
 leftWrist:add_child(left_wrist_hand)
 left_wrist_hand:scale(1.0/0.08, 1.0/0.08, 1.0/0.08)
 
 leftHand = gr.mesh('cube', 'leftHand')
 left_wrist_hand:add_child(leftHand)
-leftHand:scale(0.2,0.15,0.1)
-leftHand:translate(0.0,-0.075,0.0)
+leftHand:scale(0.1,0.2,0.15)
+leftHand:translate(0.0,0.0,0.075)
 leftHand:set_material(blue)
 
 rightShoulder = gr.mesh('sphere', 'rightShoulder')
@@ -120,7 +120,7 @@ rightShoulder:scale(0.2, 0.2, 0.2)
 rightShoulder:translate(0.4, 0.35, 0.0)
 rightShoulder:set_material(blue)
 
-right_shoulder_arm = gr.joint('right_shoulder_arm', {0,0,0}, {0,0,0})
+right_shoulder_arm = gr.joint('right_shoulder_arm', {-0.6,0,0.6}, {0,0,0})
 rightShoulder:add_child(right_shoulder_arm)
 right_shoulder_arm:scale(1.0/0.2, 1.0/0.2, 1.0/0.2)
 right_shoulder_arm:translate(0.1, 0.0, 0.0)
@@ -153,15 +153,21 @@ rightForearm:set_material(red)
 
 rightWrist = gr.mesh('sphere', 'rightWrist')
 rightForearm:add_child(rightWrist)
-rightWrist:rotate('z', 80);
+rightWrist:rotate('y', 80);
 rightWrist:scale(1.0/0.4,1.0/0.1,1.0/0.1)
 rightWrist:scale(0.08,0.08,0.08)
 rightWrist:translate(0.4, 0.0, 0.0)
 rightWrist:set_material(blue)
 
-right_wrist_hand = gr.joint('right_wrist_hand', {-0.6,0,0.6}, {0,0,0})
+right_wrist_hand = gr.joint('right_wrist_hand', {0,0,0}, {-1.0,0,1.0})
 rightWrist:add_child(right_wrist_hand)
 right_wrist_hand:scale(1.0/0.08, 1.0/0.08, 1.0/0.08)
+
+rightHand = gr.mesh('cube', 'rightHand')
+right_wrist_hand:add_child(rightHand)
+rightHand:scale(0.1,0.2,0.15)
+rightHand:translate(0.0,0.0, 0.075)
+rightHand:set_material(blue)
 
 leftHip = gr.mesh('sphere', 'leftHip')
 torso:add_child(leftHip)
@@ -170,6 +176,24 @@ leftHip:scale(0.21, 0.21, 0.21)
 leftHip:translate(-0.38, -0.5, 0.0)
 leftHip:set_material(blue)
 
+left_hip_leg = gr.joint('left_hip_leg', {-0.8,0,0.8}, {0,0,0})
+leftHip:add_child(left_hip_leg)
+left_hip_leg:scale(1.0/0.21, 1.0/0.21, 1.0/0.21)
+left_hip_leg:translate(-0.105, 0.0, 0.0)
+
+leftLeg = gr.mesh('cube', 'leftLeg')
+left_hip_leg:add_child(leftLeg)
+leftLeg:scale(0.1,0.55,0.1)
+leftLeg:translate(0,-0.4,0)
+leftLeg:set_material(red)
+
+leftKnee = gr.mesh('sphere', 'leftKnee')
+leftLeg:add_child(leftKnee)
+leftKnee:scale(1.0/0.1,1.0/0.55,1.0/0.1);
+leftKnee:scale(0.1, 0.1, 0.1)
+leftKnee:translate(0, -0.4, 0.0)
+leftKnee:set_material(blue)
+
 rightHip = gr.mesh('sphere', 'rightHip')
 torso:add_child(rightHip)
 rightHip:scale(1/0.5,1.0,1/0.5);
@@ -177,17 +201,22 @@ rightHip:scale(0.21, 0.21, 0.21)
 rightHip:translate(0.38, -0.5, 0.0)
 rightHip:set_material(blue)
 
-leftLeg = gr.mesh('cube', 'leftLeg')
-leftHip:add_child(leftLeg)
-leftLeg:scale(0.5,4,0.5)
-leftLeg:translate(0,-2.8,0)
-leftLeg:set_material(red)
+right_hip_leg = gr.joint('right_hip_leg', {-0.8,0,0.8}, {0,0,0})
+rightHip:add_child(right_hip_leg)
+right_hip_leg:scale(1.0/0.21, 1.0/0.21, 1.0/0.21)
+right_hip_leg:translate(0.105, 0.0, 0.0)
 
 rightLeg = gr.mesh('cube', 'rightLeg')
-rightHip:add_child(rightLeg)
-rightLeg:scale(0.5,4,0.5)
-rightLeg:translate(0,-2.8,0)
+right_hip_leg:add_child(rightLeg)
+rightLeg:scale(0.1,0.55,0.1)
+rightLeg:translate(0,-0.4,0)
 rightLeg:set_material(red)
 
+rightKnee = gr.mesh('sphere', 'rightKnee')
+rightLeg:add_child(rightKnee)
+rightKnee:scale(1.0/0.1,1.0/0.55,1.0/0.1);
+rightKnee:scale(0.1, 0.1, 0.1)
+rightKnee:translate(0, -0.4, 0.0)
+rightKnee:set_material(blue)
 
 return rootnode
