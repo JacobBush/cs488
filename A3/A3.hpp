@@ -71,6 +71,7 @@ protected:
 
 	//
 	void selectNode(unsigned int node_id);
+	void increaseAllSelectedJointsBy(float movement_amoount);
 
 	glm::mat4 m_perpsective;
 	glm::mat4 m_view;

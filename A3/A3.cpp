@@ -493,7 +493,13 @@ void A3::renderChildren(list<SceneNode*> children) {
 //
 void A3::renderJointNode(JointNode * node) {
 	mat4 oldNodeTransform = node->get_transform();
-	node->set_transform(node->parent->get_transform() * oldNodeTransform);
+	// Instead of overriding the get_transofmr method in jointNode,
+	// I'm just going to hardcode the joind behavior here
+	// Since we've already cached the transform, this will be idempotent
+	mat4 rx = rotate(float(node->current_jointx), vec3(1,0,0));
+	mat4 ry = rotate(float(node->current_jointy), vec3(0,1,0));
+
+	node->set_transform(node->parent->get_transform() * node->get_transform() * rx * ry);
 	renderChildren(node->children);
 	node->set_transform(oldNodeTransform);
 }
@@ -647,11 +653,26 @@ void A3::selectNode(unsigned int node_id) {
 	}
 }
 
+void recursiveUpdateJointsBy(SceneNode *current_node, float amount) {
+	if (current_node->m_nodeType == NodeType::JointNode) {
+		((JointNode * )current_node)->updateJointBy(amount);
+	}
+	for (SceneNode * node : current_node->children) {
+		recursiveUpdateJointsBy(node, amount);
+	}
+}
+
+void A3::increaseAllSelectedJointsBy(float amount) {
+	recursiveUpdateJointsBy(m_rootNode.get(), amount);
+}
+
 //
 void A3::dealWithManipulation() {
 	const float ROTATION_SPEED = 0.01f;
 	const float TRANSLATION_SPEED = 0.0015f;
 	const float TRANSLATION_DEPTH_SPEED = 0.0015f;
+
+	const float JOINT_ANGLE_SPEED = 0.003f;
 
 	if (interaction_mode == POSITION_MODE) {
 		if ((dragging >> 0) & 1U) {
@@ -668,17 +689,20 @@ void A3::dealWithManipulation() {
 			puppet_rotation = rotate(ROTATION_SPEED * mouse_movement.y, vec3(1,0,0)) * puppet_rotation;
 		}
 		mouse_movement = vec2(0.0f,0.0f);
-	} 
-
-	if (interaction_mode == JOINTS_MODE) {
+	} else if (interaction_mode == JOINTS_MODE) {
 		if ((dragging >> 0) & 1U) {
 			// dragging by left
+			// Do nothing -> handled in picking code
 		}
 		if ((dragging >> 1) & 1U) {
 			// dragging by middle
+			// Increase joint angles
+			increaseAllSelectedJointsBy(JOINT_ANGLE_SPEED * mouse_movement.y);
 		}
 		if ((dragging >> 2) & 1U) {
 			// dragging by right
+			// Placeholder since I don't have a mouse ATM
+			increaseAllSelectedJointsBy(JOINT_ANGLE_SPEED * mouse_movement.y);
 		}
 		mouse_movement = vec2(0.0f,0.0f);
 	}
