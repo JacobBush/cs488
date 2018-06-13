@@ -41,7 +41,9 @@ A3::A3(const std::string & luaSceneFile)
 	  use_backface_culling(false),
 	  interaction_mode(0),
 	  dragging(0),
-	  picking(false)
+	  picking(false),
+	  head_rotation(0),
+	  head(NULL)
 {
 	prev_mouse_posn = vec2(0,0);
 	mouse_movement = vec2(0,0);
@@ -509,6 +511,12 @@ void A3::renderJointNode(JointNode * node) {
 void A3::renderGeometryNode(GeometryNode * node) {
 	mat4 oldNodeTransform = node->get_transform();
 	node->set_transform(node->parent->get_transform() * oldNodeTransform);
+
+	// Hardcoding head == "head"
+	if (node->m_name == "head") {
+		node->set_transform(node->get_transform() * rotate(head_rotation, vec3(0,1,0)));
+	}
+
 	renderChildren(node->children);
 
 	updateShaderUniforms(m_shader, *node, m_view, picking, node->parentJointIsSelected());
@@ -644,7 +652,7 @@ void A3::selectNode(unsigned int node_id) {
 
 	SceneNode *node = recursiveSearchForNode(node_id, m_rootNode.get());
 	if (node == NULL) return;
-	cout << "Picked node " << node->m_name << endl;
+	//cout << "Picked node " << node->m_name << endl;
 
 	// If parent is a joint, we want to "pick" that joint
 	if (node->parent->m_nodeType == NodeType::JointNode) {
@@ -662,8 +670,30 @@ void recursiveUpdateJointsBy(SceneNode *current_node, float amount) {
 	}
 }
 
+//
 void A3::increaseAllSelectedJointsBy(float amount) {
 	recursiveUpdateJointsBy(m_rootNode.get(), amount);
+}
+
+// Recursively search from node for head
+
+SceneNode *A3::findHead(SceneNode *node) {
+	if (head != NULL) {
+		return head;
+	}
+
+	if (node->m_name == "head") {
+		return node;
+	}
+	for (SceneNode * child : node->children) {
+		SceneNode *potential_head = findHead(child);
+		if (potential_head != NULL) {
+			head = potential_head;
+			return head;
+		}
+	}
+	head = NULL;
+	return head;
 }
 
 //
@@ -673,6 +703,7 @@ void A3::dealWithManipulation() {
 	const float TRANSLATION_DEPTH_SPEED = 0.0015f;
 
 	const float JOINT_ANGLE_SPEED = 0.003f;
+	const float HEAD_ROTATE_SPEED = 0.003f;
 
 	if (interaction_mode == POSITION_MODE) {
 		if ((dragging >> 0) & 1U) {
@@ -701,8 +732,15 @@ void A3::dealWithManipulation() {
 		}
 		if ((dragging >> 2) & 1U) {
 			// dragging by right
-			// Placeholder since I don't have a mouse ATM
-			increaseAllSelectedJointsBy(JOINT_ANGLE_SPEED * mouse_movement.y);
+			if (((GeometryNode *)findHead(m_rootNode.get()))->parentJointIsSelected()) {
+				head_rotation += HEAD_ROTATE_SPEED * mouse_movement.x;
+				if (head_rotation > PI / 2.0f) {
+					head_rotation = PI / 2.0f;
+				}
+				if (head_rotation < -PI / 2.0f) {
+					head_rotation = -PI / 2.0f;
+				}
+			}
 		}
 		mouse_movement = vec2(0.0f,0.0f);
 	}

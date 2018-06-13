@@ -71,7 +71,7 @@ protected:
 
 	//
 	void selectNode(unsigned int node_id);
-	void increaseAllSelectedJointsBy(float movement_amoount);
+	void increaseAllSelectedJointsBy(float movement_amount);
 
 	glm::mat4 m_perpsective;
 	glm::mat4 m_view;
@@ -121,6 +121,11 @@ protected:
 	// For puppet transformations
 	glm::mat4 puppet_rotation;
 	glm::mat4 puppet_translation;
+
+	//
+	SceneNode *findHead(SceneNode *node);
+	SceneNode *head;
+	float head_rotation;
 
 
 	//

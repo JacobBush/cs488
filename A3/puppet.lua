@@ -212,10 +212,16 @@ leftAnkle:scale(0.075, 0.075, 0.075)
 leftAnkle:translate(0, -0.45, 0.0)
 leftAnkle:set_material(blue)
 
-left_ankle_foot = gr.joint('left_ankle_foot', {0,0,2.0}, {0,0,0})
+left_ankle_foot = gr.joint('left_ankle_foot', {-0.55,0,1.57}, {0,0,0})
 leftAnkle:add_child(left_ankle_foot)
 left_ankle_foot:scale(1.0/0.075, 1.0/0.075, 1.0/0.075)
 left_ankle_foot:translate(0.0, -0.0375, 0.0)
+
+leftFoot = gr.mesh('cube', 'leftFoot')
+left_ankle_foot:add_child(leftFoot)
+leftFoot:scale(0.15,0.1,0.2)
+leftFoot:translate(0.0,0.0, 0.1)
+leftFoot:set_material(blue)
 
 rightHip = gr.mesh('sphere', 'rightHip')
 torso:add_child(rightHip)
@@ -260,9 +266,15 @@ rightAnkle:scale(0.075, 0.075, 0.075)
 rightAnkle:translate(0, -0.45, 0.0)
 rightAnkle:set_material(blue)
 
-right_ankle_foot = gr.joint('right_ankle_foot', {0,0,2.0}, {0,0,0})
+right_ankle_foot = gr.joint('right_ankle_foot', {-0.55,0,1.57}, {0,0,0})
 rightAnkle:add_child(right_ankle_foot)
 right_ankle_foot:scale(1.0/0.075, 1.0/0.075, 1.0/0.075)
 right_ankle_foot:translate(0.0, -0.0375, 0.0)
+
+rightFoot = gr.mesh('cube', 'rightFoot')
+right_ankle_foot:add_child(rightFoot)
+rightFoot:scale(0.15,0.1,0.2)
+rightFoot:translate(0.0,0.0, 0.1)
+rightFoot:set_material(blue)
 
 return rootnode
