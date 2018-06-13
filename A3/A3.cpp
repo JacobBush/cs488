@@ -9,6 +9,7 @@ using namespace std;
 
 #include <imgui/imgui.h>
 
+#include <stack>
 #include <list>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/io.hpp>
@@ -99,6 +100,9 @@ void A3::init()
 	initViewMatrix();
 
 	initLightSources();
+
+	clearUndoStack();
+	clearRedoStack();
 
 
 	// Exiting the current scope calls delete automatically on meshConsolidator freeing
@@ -758,7 +762,11 @@ void A3::resetOrientation() {
 
 //
 void A3::resetJoints() {
-	cout << "resetJoints" << endl;
+	while (!undoStack.empty()) {
+		undo();
+	}
+	clearUndoStack();
+	clearRedoStack();
 }
 
 //
@@ -769,14 +777,106 @@ void A3::resetAll() {
 }
 
 //
+void A3::saveNeededStates(std::list<A3::JointNodeState> joint_state_list, bool stack_is_undo) {
+	bool need_to_save_head_rotations = false;
+	bool need_to_save_joint_rotations = false;
+	for (A3::JointNodeState jns : joint_state_list) {
+		if (jns.isHead) {
+			need_to_save_head_rotations = true;
+		} else {
+			need_to_save_joint_rotations = true;
+		}
+	}
+	if (need_to_save_head_rotations) {
+		saveHeadRotatationToStack(!stack_is_undo);
+	}
+	if (need_to_save_joint_rotations){
+		saveJointRotationsToStack(!stack_is_undo);
+	}
+}
+
+//
+void A3::setJointStates(std::list<A3::JointNodeState> joint_state_list) {
+	for (A3::JointNodeState jns : joint_state_list) {
+		if (jns.isHead) {
+			head_rotation = jns.prev_head_rotation;
+		} else {
+			jns.joint->current_jointx = jns.x;
+			jns.joint->current_jointy = jns.y;
+		}
+	}
+}
+
+
+//
 void A3::undo() {
-	cout << "undo" << endl;
+	if (undoStack.empty()) return;
+	std::list<A3::JointNodeState> joint_state_list = undoStack.top();
+	undoStack.pop();
+	saveNeededStates(joint_state_list, true);
+	setJointStates(joint_state_list);
 }
 
 //
 void A3::redo() {
-	cout << "redo" << endl;
+	if (redoStack.empty()) return;
+	std::list<A3::JointNodeState> joint_state_list = redoStack.top();
+	redoStack.pop();
+	saveNeededStates(joint_state_list, false);
+	setJointStates(joint_state_list);
 }
+
+//
+void A3::clearUndoStack() {
+	undoStack = stack<std::list<A3::JointNodeState>>();
+}
+
+//
+void A3::clearRedoStack() {
+	redoStack = stack<std::list<A3::JointNodeState>>();
+}
+
+//
+void addJointInfoToList (SceneNode * currentRoot, std::list<A3::JointNodeState> *joint_state_list) {
+	for (SceneNode * child : currentRoot->children) {
+		addJointInfoToList(child, joint_state_list);
+	}
+	if (currentRoot->m_nodeType == NodeType::JointNode) {
+		JointNode * currentJoint = (JointNode *)currentRoot;
+		A3::JointNodeState jointState = A3::JointNodeState();
+		jointState.isHead = false;
+		jointState.joint = currentJoint;
+		jointState.x = currentJoint->current_jointx;
+		jointState.y = currentJoint->current_jointy;
+		joint_state_list->push_back(jointState);
+	}
+}
+
+//
+void A3::saveJointRotationsToStack(bool stack_is_undo) {
+	std::list<A3::JointNodeState> joint_state_list = std::list<A3::JointNodeState>();
+	addJointInfoToList(m_rootNode.get(), &joint_state_list);
+	if (stack_is_undo) {
+		undoStack.push(joint_state_list);
+	} else {
+		redoStack.push(joint_state_list);
+	}
+}
+
+//
+void A3::saveHeadRotatationToStack(bool stack_is_undo) {
+	std::list<A3::JointNodeState> joint_state_list = std::list<A3::JointNodeState>();
+	A3::JointNodeState jointState = A3::JointNodeState();
+	jointState.isHead = true;
+	jointState.prev_head_rotation = head_rotation;
+	joint_state_list.push_back(jointState);
+	if (stack_is_undo) {
+		undoStack.push(joint_state_list);
+	} else {
+		redoStack.push(joint_state_list);
+	}
+}
+
 
 //----------------------------------------------------------------------------------------
 /*
@@ -849,6 +949,10 @@ bool A3::mouseButtonInputEvent (
 		if (button == GLFW_MOUSE_BUTTON_MIDDLE && actions == GLFW_PRESS) {
 			prev_mouse_posn = vec2(ImGui::GetMousePos().x,  ImGui::GetMousePos().y);
 			dragging |= 1UL << 1;
+			if (interaction_mode == JOINTS_MODE) {
+				saveJointRotationsToStack(true);
+				clearRedoStack();
+			}
 			eventHandled = true;
 		}
 		if (button == GLFW_MOUSE_BUTTON_MIDDLE && actions == GLFW_RELEASE) {
@@ -858,6 +962,12 @@ bool A3::mouseButtonInputEvent (
 		if (button == GLFW_MOUSE_BUTTON_RIGHT && actions == GLFW_PRESS) {
 			prev_mouse_posn = vec2(ImGui::GetMousePos().x,  ImGui::GetMousePos().y);
 			dragging |= 1UL << 2;
+
+			if (interaction_mode == JOINTS_MODE && 
+				((GeometryNode *)findHead(m_rootNode.get()))->parentJointIsSelected()) {
+				saveHeadRotatationToStack(true);
+				clearRedoStack();
+			}
 			eventHandled = true;
 		}
 		if (button == GLFW_MOUSE_BUTTON_RIGHT && actions == GLFW_RELEASE) {

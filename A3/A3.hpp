@@ -10,6 +10,7 @@
 #include "JointNode.hpp"
 
 #include <list>
+#include <stack>
 #include <glm/glm.hpp>
 #include <memory>
 
@@ -23,6 +24,17 @@ class A3 : public CS488Window {
 public:
 	A3(const std::string & luaSceneFile);
 	virtual ~A3();
+
+
+	struct JointNodeState {
+		JointNode * joint;
+		double x;
+		double y;
+		// We're going to be lazy here, and
+		// have 2 blank fields most of the time
+		bool isHead;
+		float prev_head_rotation;
+	};
 
 protected:
 	virtual void init() override;
@@ -64,6 +76,10 @@ protected:
 	// Undo
 	void undo();
 	void redo();
+	void clearUndoStack();
+	void clearRedoStack();
+	void saveJointRotationsToStack(bool stack_is_undo);
+	void saveHeadRotatationToStack(bool stack_is_undo);
 
 	//
 	void dealWithManipulation();
@@ -72,6 +88,13 @@ protected:
 	//
 	void selectNode(unsigned int node_id);
 	void increaseAllSelectedJointsBy(float movement_amount);
+
+	//
+	SceneNode *findHead(SceneNode *node);
+
+	//
+	void setJointStates(std::list<JointNodeState> joint_state_list);
+	void saveNeededStates(std::list<JointNodeState> joint_state_list, bool stack_is_undo);
 
 	glm::mat4 m_perpsective;
 	glm::mat4 m_view;
@@ -123,10 +146,11 @@ protected:
 	glm::mat4 puppet_translation;
 
 	//
-	SceneNode *findHead(SceneNode *node);
 	SceneNode *head;
 	float head_rotation;
 
+	std::stack<std::list<JointNodeState>> undoStack;
+	std::stack<std::list<JointNodeState>> redoStack;
 
 	//
 	//std::list<JointNode*> selectedJoints;
