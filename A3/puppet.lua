@@ -194,6 +194,29 @@ leftKnee:scale(0.1, 0.1, 0.1)
 leftKnee:translate(0, -0.4, 0.0)
 leftKnee:set_material(blue)
 
+left_knee_calf = gr.joint('left_knee_calf', {0,0,2.0}, {0,0,0})
+leftKnee:add_child(left_knee_calf)
+left_knee_calf:scale(1.0/0.1, 1.0/0.1, 1.0/0.1)
+left_knee_calf:translate(0.0, -0.05, 0.0)
+
+leftCalf = gr.mesh('cube', 'leftCalf')
+left_knee_calf:add_child(leftCalf)
+leftCalf:scale(0.1,0.55,0.1)
+leftCalf:translate(0,-0.25,0)
+leftCalf:set_material(red)
+
+leftAnkle = gr.mesh('sphere', 'leftAnkle')
+leftCalf:add_child(leftAnkle)
+leftAnkle:scale(1.0/0.1,1.0/0.55,1.0/0.1);
+leftAnkle:scale(0.075, 0.075, 0.075)
+leftAnkle:translate(0, -0.45, 0.0)
+leftAnkle:set_material(blue)
+
+left_ankle_foot = gr.joint('left_ankle_foot', {0,0,2.0}, {0,0,0})
+leftAnkle:add_child(left_ankle_foot)
+left_ankle_foot:scale(1.0/0.075, 1.0/0.075, 1.0/0.075)
+left_ankle_foot:translate(0.0, -0.0375, 0.0)
+
 rightHip = gr.mesh('sphere', 'rightHip')
 torso:add_child(rightHip)
 rightHip:scale(1/0.5,1.0,1/0.5);
@@ -218,5 +241,28 @@ rightKnee:scale(1.0/0.1,1.0/0.55,1.0/0.1);
 rightKnee:scale(0.1, 0.1, 0.1)
 rightKnee:translate(0, -0.4, 0.0)
 rightKnee:set_material(blue)
+
+right_knee_calf = gr.joint('right_knee_calf', {0,0,2.0}, {0,0,0})
+rightKnee:add_child(right_knee_calf)
+right_knee_calf:scale(1.0/0.1, 1.0/0.1, 1.0/0.1)
+right_knee_calf:translate(0.0, -0.05, 0.0)
+
+rightCalf = gr.mesh('cube', 'rightCalf')
+right_knee_calf:add_child(rightCalf)
+rightCalf:scale(0.1,0.55,0.1)
+rightCalf:translate(0,-0.25,0)
+rightCalf:set_material(red)
+
+rightAnkle = gr.mesh('sphere', 'rightAnkle')
+rightCalf:add_child(rightAnkle)
+rightAnkle:scale(1.0/0.1,1.0/0.55,1.0/0.1);
+rightAnkle:scale(0.075, 0.075, 0.075)
+rightAnkle:translate(0, -0.45, 0.0)
+rightAnkle:set_material(blue)
+
+right_ankle_foot = gr.joint('right_ankle_foot', {0,0,2.0}, {0,0,0})
+rightAnkle:add_child(right_ankle_foot)
+right_ankle_foot:scale(1.0/0.075, 1.0/0.075, 1.0/0.075)
+right_ankle_foot:translate(0.0, -0.0375, 0.0)
 
 return rootnode
