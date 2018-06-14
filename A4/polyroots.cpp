@@ -82,6 +82,9 @@ static double PolishRoot(
 /* SIGN(x) is -1 if x is negative, otherwise it's 1 */
 #define SIGN(x) (((x) < 0) ? -1 : 1)
 
+// HUGE is not defined
+#define HUGE HUGE_VAL
+
 /*
  * Hack together a Windows equivalent for cube root.  It's defined 
  * in Linux.  This is probably not the best way to implement the cube
