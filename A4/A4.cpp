@@ -1,7 +1,9 @@
 #include <glm/ext.hpp>
 #include <functional>
+#include <math.h>
 
 #include "A4.hpp"
+#include "GeometryNode.hpp"
 
 void set_background_pixel (int x, int y, int w, int h, Image & image) {
 	// Red: increasing from top to bottom
@@ -13,17 +15,19 @@ void set_background_pixel (int x, int y, int w, int h, Image & image) {
 					|| (y >= h/2 && x >= w/2)) ? 1.0 : 0.0;
 }
 
+/*
 std::function<glm::vec3 (int t)> make_ray(const glm::vec3 & eye, const glm::vec3 & pixel) {
 	return [=](int t) -> glm::vec3 {
 		return eye + t*(pixel - eye);
 	};
 }
+*/
 
-glm::mat4 pixel_to_world(uint nx, uint ny,
-					     const glm::vec3 & eye,
-					     const glm::vec3 & view,
-					     const glm::vec3 & up,
-					     double fovy) {
+glm::mat4 screen_to_world(uint nx, uint ny,
+					      const glm::vec3 & eye,
+					      const glm::vec3 & view,
+					      const glm::vec3 & up,
+					      double fovy) {
 
 	double d = glm::distance(eye, view);
 	glm::mat4 T1 = glm::translate(glm::vec3(-(double)nx/2, -(double)ny/2, d));
@@ -46,6 +50,31 @@ glm::mat4 pixel_to_world(uint nx, uint ny,
 	glm::mat4 T4 = glm::translate(eye);
 
 	return T4 * R3 * S2 * T1; 
+}
+
+
+double intersect(glm::vec3 eye, glm::vec3 point, SceneNode *node) {
+	// return of NAN if no intersect
+	if (node->m_nodeType != NodeType::GeometryNode) return nan("");
+	return ((GeometryNode *)node)->m_primitive->intersection(eye, point);
+}
+
+//void recursive_intersect(std::function<glm::vec3 (int t)> ray, SceneNode *node) {
+double recursive_intersect(glm::vec3 eye, glm::vec3 point, SceneNode *node) {
+	// return of NAN if no intersect
+	double t = intersect(eye, point, node);
+	for (SceneNode * child: node->children) {
+		double tprime = recursive_intersect(eye, point, child);
+		if (isnan(t)) {
+			t = tprime;
+		} else if (isnan(tprime)) {
+			// t = t
+		} else {
+			t = glm::min(t, tprime);
+		}
+	}
+	//if (t == NAN) std::cout << "NAN" << std::endl;
+	return t;
 }
 
 void A4_Render(
@@ -87,13 +116,20 @@ void A4_Render(
 	size_t h = image.height();
 	size_t w = image.width();
 
-	glm::mat4 transform = pixel_to_world(w,h,eye,view,up,fovy);
+	glm::mat4 S2W_transform = screen_to_world(w,h,eye,view,up,fovy);
 
 	for (uint y = 0; y < h; ++y) {
 		for (uint x = 0; x < w; ++x) {
-			glm::vec3 pixel = glm::vec3(transform * glm::vec4(x,y,0,1));
-			std::function<glm::vec3 (int t)> ray = make_ray(eye, pixel);
-			set_background_pixel(x,y,w,h,image);
+			glm::vec3 pixel = glm::vec3(S2W_transform * glm::vec4(x,y,0,1));
+			//std::cout << pixel.x << ", " <<  pixel.y << ", " <<pixel.z << std::endl;
+			//std::function<glm::vec3 (int t)> ray = make_ray(eye, pixel);
+			double intersection = recursive_intersect(eye, pixel, root);
+			if (isnan(intersection)) {
+				// We did not intersect with any objects
+				set_background_pixel(x,y,w,h,image);
+			} else {
+				// deal with material
+			}
 		}
 	}
 

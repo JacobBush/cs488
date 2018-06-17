@@ -5,16 +5,23 @@
 class Primitive {
 public:
   virtual ~Primitive();
+  virtual double intersection(glm::vec3 a, glm::vec3 b);
+
+protected:
+  // 10^-10
+  const double EPSILON = 0.000000001;
 };
 
 class Sphere : public Primitive {
 public:
   virtual ~Sphere();
+  double intersection(glm::vec3 a, glm::vec3 b) override;
 };
 
 class Cube : public Primitive {
 public:
   virtual ~Cube();
+  double intersection(glm::vec3 a, glm::vec3 b) override;
 };
 
 class NonhierSphere : public Primitive {
@@ -24,6 +31,7 @@ public:
   {
   }
   virtual ~NonhierSphere();
+  double intersection(glm::vec3 a, glm::vec3 b) override;
 
 private:
   glm::vec3 m_pos;
@@ -38,6 +46,7 @@ public:
   }
   
   virtual ~NonhierBox();
+  double intersection(glm::vec3 a, glm::vec3 b) override;
 
 private:
   glm::vec3 m_pos;
