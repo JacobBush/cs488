@@ -6,6 +6,8 @@
 #include "Light.hpp"
 #include "Image.hpp"
 
+#include "GeometryNode.hpp"
+
 void A4_Render(
 		// What to render
 		SceneNode * root,
@@ -23,3 +25,8 @@ void A4_Render(
 		const glm::vec3 & ambient,
 		const std::list<Light *> & lights
 );
+
+struct Intersection {
+	double t; // the value to plug into parametric
+	GeometryNode *node; // what was hit
+};

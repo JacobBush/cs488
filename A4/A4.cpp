@@ -53,28 +53,45 @@ glm::mat4 screen_to_world(uint nx, uint ny,
 }
 
 
-double intersect(glm::vec3 eye, glm::vec3 point, SceneNode *node) {
+Intersection intersect(glm::vec3 eye, glm::vec3 point, SceneNode *node) {
 	// return of NAN if no intersect
-	if (node->m_nodeType != NodeType::GeometryNode) return nan("");
-	return ((GeometryNode *)node)->m_primitive->intersection(eye, point);
+	Intersection i;
+	if (node->m_nodeType != NodeType::GeometryNode) {
+		i.t = nan("");
+		i.node = NULL;
+	} else {
+		GeometryNode * geo_node = (GeometryNode *)node;
+		i.t = geo_node->m_primitive->intersection(eye, point);
+		i.node = geo_node;
+	}
+	return i;
 }
 
 //void recursive_intersect(std::function<glm::vec3 (int t)> ray, SceneNode *node) {
-double recursive_intersect(glm::vec3 eye, glm::vec3 point, SceneNode *node) {
+Intersection recursive_intersect(glm::vec3 eye, glm::vec3 point, SceneNode *node) {
 	// return of NAN if no intersect
-	double t = intersect(eye, point, node);
+	Intersection i = intersect(eye, point, node);
 	for (SceneNode * child: node->children) {
-		double tprime = recursive_intersect(eye, point, child);
-		if (isnan(t)) {
-			t = tprime;
-		} else if (isnan(tprime)) {
-			// t = t
-		} else {
-			t = glm::min(t, tprime);
+		Intersection iprime = recursive_intersect(eye, point, child);
+		if (isnan(i.t) || iprime.t < i.t) {
+			i = iprime;
 		}
 	}
-	//if (t == NAN) std::cout << "NAN" << std::endl;
-	return t;
+	return i;
+}
+
+void ray_trace(uint x, uint y, uint w, uint h,
+			   glm::vec3 eye, glm::vec3 pixel, SceneNode *node,
+			   Image & image) {
+
+	Intersection intersection = recursive_intersect(eye, pixel, node);
+	if (isnan(intersection.t)) {
+		// We did not intersect with any objects
+		set_background_pixel(x,y,w,h,image);
+	} else {
+		// deal with material
+	}
+
 }
 
 void A4_Render(
@@ -121,15 +138,7 @@ void A4_Render(
 	for (uint y = 0; y < h; ++y) {
 		for (uint x = 0; x < w; ++x) {
 			glm::vec3 pixel = glm::vec3(S2W_transform * glm::vec4(x,y,0,1));
-			//std::cout << pixel.x << ", " <<  pixel.y << ", " <<pixel.z << std::endl;
-			//std::function<glm::vec3 (int t)> ray = make_ray(eye, pixel);
-			double intersection = recursive_intersect(eye, pixel, root);
-			if (isnan(intersection)) {
-				// We did not intersect with any objects
-				set_background_pixel(x,y,w,h,image);
-			} else {
-				// deal with material
-			}
+			ray_trace(x,y,w,h,eye,pixel,root,image);
 		}
 	}
 
