@@ -9,6 +9,10 @@ public:
   PhongMaterial(const glm::vec3& kd, const glm::vec3& ks, double shininess);
   virtual ~PhongMaterial();
 
+  glm::vec3 get_kd();
+  glm::vec3 get_ks();
+  double get_shininess();
+
 private:
   glm::vec3 m_kd;
   glm::vec3 m_ks;

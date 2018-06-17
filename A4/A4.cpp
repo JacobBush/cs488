@@ -4,8 +4,23 @@
 
 #include "A4.hpp"
 #include "GeometryNode.hpp"
+#include "PhongMaterial.hpp"
 
-void set_background_pixel (int x, int y, int w, int h, Image & image) {
+const uint MAX_HITS = 10;
+
+const double EPSILON = 0.00000000001;
+const glm::vec3 ZERO_VECTOR3 = glm::vec3(0.0,0.0,0.0);
+
+bool vector_equals(const glm::vec3 &a, const glm::vec3 &b) {
+	if (
+		glm::abs(a.x - b.x) < EPSILON &&
+		glm::abs(a.y - b.y) < EPSILON &&
+		glm::abs(a.z - b.z) < EPSILON
+	) return true;
+	return false;
+}
+
+void set_background_pixel (uint x, uint y, uint w, uint h, Image & image) {
 	// Red: increasing from top to bottom
 	image(x, y, 0) = (double)y / h;
 	// Green: increasing from left to right
@@ -15,14 +30,84 @@ void set_background_pixel (int x, int y, int w, int h, Image & image) {
 					|| (y >= h/2 && x >= w/2)) ? 1.0 : 0.0;
 }
 
+void set_pixel (glm::vec3 color, uint x, uint y, Image & image) {
+	image(x,y,0) = color[0];
+  	image(x,y,1) = color[1];
+  	image(x,y,2) = color[2];
+}
+
+glm::vec3 ray_point_at_parameter(const glm::vec3 & a, const glm::vec3 & b, double t) {
+	return a + t*(b-a);
+}
+
+glm::vec3 entrywise_multiply(const glm::vec3 &a, const glm::vec3 &b) {
+	return glm::vec3(a.x * b.x, a.y * b.y , a.z * b.z);
+}
+
+glm::vec3 direct_light(const glm::vec3 &p, const glm::vec3 &N, Light *light) {
+	if (glm::dot(light->position - p, N) > 0) {
+		return light->colour;
+	} else { // not on same side as light
+		return glm::vec3(0.0,0.0,0.0);
+	}
+}
+
+glm::vec3 get_color_of_intersection(Intersection intersection, glm::vec3 eye, glm::vec3 pixel,
+								    const glm::vec3 & ambient, const std::list<Light *> & lights,
+								    uint max_hits) {
+	if (!intersection.has_intersected) {
+		std::cout << "set_pixel called with !intersect.has_intersected" << std::endl;
+		throw;
+	}
+
+	Material *mat = intersection.node->m_material;
+	if (dynamic_cast<PhongMaterial*>(mat) == nullptr) {	
+    	std::cout << "Unkown material type" << std::endl;
+  	}
+
+  	PhongMaterial *p_mat = (PhongMaterial *)mat;
+
+  	glm::vec3 ke = glm::vec3(0.0,0.0,0.0); // The objects are non-emittive
+
+  	glm::vec3 kd = p_mat->get_kd();
+  	glm::vec3 ks = p_mat->get_ks();
+  	//double shininess = p_mat->get_shininess();
+
+  	glm::vec3 col = ke + entrywise_multiply(kd, ambient);
+
+  	glm::vec3 p = ray_point_at_parameter(eye, pixel, intersection.t);
+  	glm::vec3 N = intersection.node->m_primitive->get_normal_at_point(p);
+
+  	if (!vector_equals(kd, ZERO_VECTOR3)) {
+  		for (Light * light : lights) {
+  			col += entrywise_multiply(kd, direct_light(p,N,light));
+  		}
+  	}
+
+  	// DEAL WITH KS and reflections
+
+	return col;
+}
+
 /*
-std::function<glm::vec3 (int t)> make_ray(const glm::vec3 & eye, const glm::vec3 & pixel) {
-	return [=](int t) -> glm::vec3 {
-		return eye + t*(pixel - eye);
-	};
+void set_pixel (Intersection intersect, uint x, uint y, Image & image) {
+	if (!intersect.has_intersected) {
+		std::cout << "set_pixel called with !intersect.has_intersected" << std::endl;
+		return;
+	}
+
+	Material *mat = intersect.node->m_material;
+	if (dynamic_cast<PhongMaterial*>(mat) == nullptr) {	
+    	std::cout << "Unkown material type" << std::endl;
+  	}
+
+  	PhongMaterial *p_mat = (PhongMaterial *)mat;
+
+  	glm::vec3 col = get_color(p_mat);
+
+  	
 }
 */
-
 glm::mat4 screen_to_world(uint nx, uint ny,
 					      const glm::vec3 & eye,
 					      const glm::vec3 & view,
@@ -52,19 +137,13 @@ glm::mat4 screen_to_world(uint nx, uint ny,
 	return T4 * R3 * S2 * T1; 
 }
 
-
 Intersection intersect(glm::vec3 eye, glm::vec3 point, SceneNode *node) {
-	// return of NAN if no intersect
-	Intersection i;
 	if (node->m_nodeType != NodeType::GeometryNode) {
-		i.t = nan("");
-		i.node = NULL;
+		return Intersection();
 	} else {
-		GeometryNode * geo_node = (GeometryNode *)node;
-		i.t = geo_node->m_primitive->intersection(eye, point);
-		i.node = geo_node;
+		GeometryNode *geo_node = (GeometryNode *)node;
+		return Intersection(geo_node->m_primitive->intersection(eye, point), geo_node);
 	}
-	return i;
 }
 
 //void recursive_intersect(std::function<glm::vec3 (int t)> ray, SceneNode *node) {
@@ -73,7 +152,7 @@ Intersection recursive_intersect(glm::vec3 eye, glm::vec3 point, SceneNode *node
 	Intersection i = intersect(eye, point, node);
 	for (SceneNode * child: node->children) {
 		Intersection iprime = recursive_intersect(eye, point, child);
-		if (isnan(i.t) || iprime.t < i.t) {
+		if (!i.has_intersected || iprime.t < i.t) {
 			i = iprime;
 		}
 	}
@@ -82,14 +161,18 @@ Intersection recursive_intersect(glm::vec3 eye, glm::vec3 point, SceneNode *node
 
 void ray_trace(uint x, uint y, uint w, uint h,
 			   glm::vec3 eye, glm::vec3 pixel, SceneNode *node,
-			   Image & image) {
+			   Image & image, const glm::vec3 & ambient, const std::list<Light *> & lights) {
+
+	glm::vec3 col;
 
 	Intersection intersection = recursive_intersect(eye, pixel, node);
-	if (isnan(intersection.t)) {
-		// We did not intersect with any objects
+
+	if (!intersection.has_intersected) {
 		set_background_pixel(x,y,w,h,image);
 	} else {
-		// deal with material
+		// deal with intersection
+		glm::vec3 color = get_color_of_intersection(intersection, eye, pixel, ambient, lights, MAX_HITS);
+		set_pixel(color, x, y, image);
 	}
 
 }
@@ -138,7 +221,7 @@ void A4_Render(
 	for (uint y = 0; y < h; ++y) {
 		for (uint x = 0; x < w; ++x) {
 			glm::vec3 pixel = glm::vec3(S2W_transform * glm::vec4(x,y,0,1));
-			ray_trace(x,y,w,h,eye,pixel,root,image);
+			ray_trace(x,y,w,h,eye,pixel,root,image,ambient,lights);
 		}
 	}
 

@@ -6,6 +6,7 @@ class Primitive {
 public:
   virtual ~Primitive();
   virtual double intersection(glm::vec3 a, glm::vec3 b);
+  virtual glm::vec3 get_normal_at_point(glm::vec3 p);
 
 protected:
   // 10^-10
@@ -16,12 +17,14 @@ class Sphere : public Primitive {
 public:
   virtual ~Sphere();
   double intersection(glm::vec3 a, glm::vec3 b) override;
+  glm::vec3 get_normal_at_point(glm::vec3 p) override;
 };
 
 class Cube : public Primitive {
 public:
   virtual ~Cube();
   double intersection(glm::vec3 a, glm::vec3 b) override;
+  glm::vec3 get_normal_at_point(glm::vec3 p) override;
 };
 
 class NonhierSphere : public Primitive {
@@ -32,6 +35,7 @@ public:
   }
   virtual ~NonhierSphere();
   double intersection(glm::vec3 a, glm::vec3 b) override;
+  glm::vec3 get_normal_at_point(glm::vec3 p) override;
 
 private:
   glm::vec3 m_pos;
@@ -47,6 +51,7 @@ public:
   
   virtual ~NonhierBox();
   double intersection(glm::vec3 a, glm::vec3 b) override;
+  glm::vec3 get_normal_at_point(glm::vec3 p) override;
 
 private:
   glm::vec3 m_pos;

@@ -74,3 +74,23 @@ double NonhierBox::intersection(glm::vec3 a, glm::vec3 b) {
 	// -1 -> no intersection
 	return nan("");
 }
+
+glm::vec3 Primitive::get_normal_at_point(glm::vec3 p) {
+	return glm::vec3(0.0,0.0,0.0);
+}
+
+glm::vec3 Sphere::get_normal_at_point(glm::vec3 p) {
+	return glm::vec3(0.0,0.0,0.0);
+}
+
+glm::vec3 Cube::get_normal_at_point(glm::vec3 p) {
+	return glm::vec3(0.0,0.0,0.0);
+}
+
+glm::vec3 NonhierSphere::get_normal_at_point(glm::vec3 p) {
+	return glm::normalize(p - m_pos);
+}
+
+glm::vec3 NonhierBox::get_normal_at_point(glm::vec3 p) {
+	return glm::vec3(0.0,0.0,0.0);
+}
