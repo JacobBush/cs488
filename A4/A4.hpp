@@ -41,3 +41,7 @@ struct Intersection {
 		has_intersected = isnan(t) ? false : true;
 	}
 };
+
+glm::vec3 get_color_of_intersection(Intersection intersection, glm::vec3 a, glm::vec3 b,
+								    const glm::vec3 & ambient, const std::list<Light *> & lights,
+								    uint hits_allowed, SceneNode * node);

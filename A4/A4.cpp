@@ -6,10 +6,14 @@
 #include "GeometryNode.hpp"
 #include "PhongMaterial.hpp"
 
-const uint MAX_HITS = 10;
+const uint MAX_HITS = 1;
 
-const double EPSILON = 0.00000000001;
+const double EPSILON = 0.001;
 const glm::vec3 ZERO_VECTOR3 = glm::vec3(0.0,0.0,0.0);
+
+double deg_to_rad(double deg) {
+	return deg * 0.01745329252; // pi / 180
+}
 
 bool vector_equals(const glm::vec3 &a, const glm::vec3 &b) {
 	if (
@@ -61,7 +65,7 @@ Intersection recursive_intersect(glm::vec3 a, glm::vec3 b, SceneNode *node) {
 	Intersection i = intersect(a, b, node);
 	for (SceneNode * child: node->children) {
 		Intersection iprime = recursive_intersect(a, b, child);
-		if (!i.has_intersected || iprime.t < i.t || i.t < EPSILON) {
+		if (!i.has_intersected || iprime.t < i.t) {
 			i = iprime;
 		}
 	}
@@ -73,17 +77,36 @@ glm::vec3 direct_light(const glm::vec3 &p, const glm::vec3 &N, Light *light, Sce
 		return glm::vec3(0.0,0.0,0.0);
 	}
 	Intersection intersection = recursive_intersect(p, light->position, node);
-	if (intersection.has_intersected && intersection.t > 0 && intersection.t < 1) { // there's a shadow cast
+	if (intersection.has_intersected && intersection.t > 0.0 && intersection.t < 1.0) { // there's a shadow cast
 		return glm::vec3(0.0,0.0,0.0);
 	}
 	return light->colour;
 }
 
+glm::vec3 get_reflected_ray_endpoint (glm::vec3 a, glm::vec3 b, glm::vec3 N) {
+	// make new ray b-->q with angle(N, q-b) == angle(N, a-b)
+	// https://math.stackexchange.com/questions/13261/how-to-get-a-reflection-vector
+	return (b-a) - 2.0 * glm::dot(b-a, N) * N;
+}
+
+glm::vec3 get_reflected_color(glm::vec3 a, glm::vec3 p, glm::vec3 N,
+				              const glm::vec3 & ambient, const std::list<Light *> & lights,
+							  uint hits_allowed, SceneNode * node) {
+  	glm::vec3 q = get_reflected_ray_endpoint(a, p, N);
+  	Intersection intersection = recursive_intersect(p, q, node);
+  	if (!intersection.has_intersected) {
+		return glm::vec3(0.0,0.0,0.0); // return background?
+	} else {
+  		return get_color_of_intersection(intersection, p, q, ambient, lights, hits_allowed, node);
+	}
+}
+
 glm::vec3 get_color_of_intersection(Intersection intersection, glm::vec3 a, glm::vec3 b,
 								    const glm::vec3 & ambient, const std::list<Light *> & lights,
-								    uint max_hits, SceneNode * node) {
+								    uint hits_allowed, SceneNode * node) {
 	// Node will be used to determine shadows
 	// a---->b is ray
+	// hits_allowed will decrease if tracing reflections
 	if (!intersection.has_intersected) {
 		std::cout << "set_pixel called with !intersect.has_intersected" << std::endl;
 		throw;
@@ -113,7 +136,11 @@ glm::vec3 get_color_of_intersection(Intersection intersection, glm::vec3 a, glm:
   		}
   	}
 
-  	// DEAL WITH KS and reflections
+  	if (!vector_equals(ks, ZERO_VECTOR3) && hits_allowed > 0) {
+  		// Do a reflection
+  		glm::vec3 ref_col = get_reflected_color(a,p,N,ambient, lights, hits_allowed - 1, node);
+  		col += entrywise_multiply(ks, ref_col);
+  	}
 
 	return col;
 }
@@ -125,21 +152,21 @@ glm::mat4 screen_to_world(uint nx, uint ny,
 					      double fovy) {
 
 	double d = glm::distance(eye, view);
-	glm::mat4 T1 = glm::translate(glm::vec3(-(double)nx/2, -(double)ny/2, d));
+	glm::mat4 T1 = glm::translate(glm::vec3(-(double)nx/2.0, -(double)ny/2.0, d));
 
-	double height = 2.0 * d * glm::tan(fovy/2.0);
+	double height = 2.0 * d * glm::tan(deg_to_rad(fovy)/2.0);
 	//double width = (double)nx/(double)ny * height;
 	double scale_factor = height/ny;
-	glm::mat4 S2 = glm::scale(glm::vec3(-scale_factor, scale_factor, 1));
+	glm::mat4 S2 = glm::scale(glm::vec3(-scale_factor, scale_factor, 1.0));
 
 	glm::vec3 w = glm::normalize(view - eye);
 	glm::vec3 u = glm::normalize(glm::cross(up, w));
-	glm::vec3 v = glm::cross(w,u);
+	glm::vec3 v = glm::cross(u,w);
 	glm::mat4 R3 = glm::mat4(
-		glm::vec4(u,0),
-		glm::vec4(v,0),
-		glm::vec4(w,0),
-		glm::vec4(0,0,0,1)
+		glm::vec4(u,0.0),
+		glm::vec4(v,0.0),
+		glm::vec4(w,0.0),
+		glm::vec4(0.0,0.0,0.0,1.0)
 	);
 
 	glm::mat4 T4 = glm::translate(eye);
@@ -208,7 +235,7 @@ void A4_Render(
 
 	for (uint y = 0; y < h; ++y) {
 		for (uint x = 0; x < w; ++x) {
-			glm::vec3 pixel = glm::vec3(S2W_transform * glm::vec4(x,y,0,1));
+			glm::vec3 pixel = glm::vec3(S2W_transform * glm::vec4((double)x,(double)y,0.0,1.0));
 			ray_trace(x,y,w,h,eye,pixel,root,image,ambient,lights);
 		}
 	}
