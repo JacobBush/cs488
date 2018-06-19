@@ -25,8 +25,14 @@ struct Triangle
 class Mesh : public Primitive {
 public:
   Mesh( const std::string& fname );
+  double intersection(glm::vec3 a, glm::vec3 b) override;
+  glm::vec3 get_normal_at_point(glm::vec3 p) override;
   
 private:
+    glm::vec3 triangle_norm(const Triangle & tri);
+    bool point_on_triangle(glm::vec3 p, const Triangle & tri);
+    double triangle_intersection(const Triangle & tri, glm::vec3 a, glm::vec3 b);
+
 	std::vector<glm::vec3> m_vertices;
 	std::vector<Triangle> m_faces;
 

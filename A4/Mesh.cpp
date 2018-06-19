@@ -1,10 +1,12 @@
 #include <iostream>
 #include <fstream>
+#include <math.h>
 
 #include <glm/ext.hpp>
 
 // #include "cs488-framework/ObjFileDecoder.hpp"
 #include "Mesh.hpp"
+
 
 Mesh::Mesh( const std::string& fname )
 	: m_vertices()
@@ -45,4 +47,80 @@ std::ostream& operator<<(std::ostream& out, const Mesh& mesh)
 */
   out << "}";
   return out;
+}
+
+glm::vec3 Mesh::triangle_norm(const Triangle & tri) {
+	glm::vec3 a = m_vertices.at(tri.v1);
+	glm::vec3 b = m_vertices.at(tri.v2);
+	glm::vec3 c = m_vertices.at(tri.v3);
+	return glm::cross(b-a, c-a);
+}
+
+bool Mesh::point_on_triangle(glm::vec3 p, const Triangle & tri) {
+	glm::vec3 P0 = m_vertices.at(tri.v1);
+	glm::vec3 P1 = m_vertices.at(tri.v2);
+	glm::vec3 P2 = m_vertices.at(tri.v3);
+
+	glm::vec3 C0 = P1-P0;
+	glm::vec3 C1 = P2-P0;
+	glm::vec3 C2 = glm::vec3(1.0);
+	glm::vec3 R = p-P0;
+
+	double D = glm::determinant(glm::mat3(C0,C1,C2));
+	if (glm::abs(D) < EPSILON) return false;
+
+	double D0 = glm::determinant(glm::mat3(R,C1,C2));
+	double D1 = glm::determinant(glm::mat3(C0,R,C2));
+
+	double beta = D0 / D;
+	double gamma = D1 / D;
+
+	return (beta >= -EPSILON && gamma >= -EPSILON && beta + gamma - 1 <= EPSILON);
+}
+
+double Mesh::triangle_intersection(const Triangle & tri, glm::vec3 a, glm::vec3 b) {
+	glm::vec3 P0 = m_vertices.at(tri.v1);
+	glm::vec3 P1 = m_vertices.at(tri.v2);
+	glm::vec3 P2 = m_vertices.at(tri.v3);
+	
+	glm::vec3 C0 = P1-P0;
+	glm::vec3 C1 = P2-P0;
+	glm::vec3 C2 = -(b-a);
+	glm::vec3 R = a - P0;
+
+	double D = glm::determinant(glm::mat3(C0,C1,C2));
+	if (glm::abs(D) < EPSILON) return nan("");
+
+	double D0 = glm::determinant(glm::mat3(R,C1,C2));
+	double D1 = glm::determinant(glm::mat3(C0,R,C2));
+	double D2 = glm::determinant(glm::mat3(C0,C1,R));
+
+	double beta = D0 / D;
+	double gamma = D1 / D;
+	double t = D2 / D;
+
+	if (beta >= -EPSILON && gamma >= -EPSILON && beta + gamma - 1 <= EPSILON) {
+		return t;
+	} else {
+		return nan("");
+	}
+}
+
+double Mesh::intersection(glm::vec3 a, glm::vec3 b) {
+	// where (b-a) defines a ray.
+	double t = nan("");
+	for (Triangle tri : m_faces) {
+		double tprime = triangle_intersection(tri, a, b);
+		if (isnan(t) || (!isnan(tprime) && tprime < t)) t = tprime;
+	}
+	return t;
+}
+
+glm::vec3 Mesh::get_normal_at_point(glm::vec3 p) {
+	for (Triangle tri : m_faces) {
+		if (point_on_triangle(p, tri)) {
+			return triangle_norm(tri);
+		}
+	}
+	return glm::vec3(0.0);
 }

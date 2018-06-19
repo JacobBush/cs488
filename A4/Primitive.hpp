@@ -10,7 +10,9 @@ public:
 
 protected:
   // 10^-10
-  const double EPSILON = 0.0000000001;
+  const double EPSILON = 0.0001;
+  double plane_intersection(glm::vec3 p0, glm::vec3 N, glm::vec3 a, glm::vec3 b);
+  glm::vec3 ray_point_at_parameter(const glm::vec3 &a, const glm::vec3 &b, double t);
 };
 
 class Sphere : public Primitive {
@@ -54,6 +56,9 @@ public:
   glm::vec3 get_normal_at_point(glm::vec3 p) override;
 
 private:
+  double intersect_side(uint side, bool front, glm::vec3 a, glm::vec3 b);
+  bool point_on_side(glm::vec3 p, uint side, bool front);
+
   glm::vec3 m_pos;
   double m_size;
 };
