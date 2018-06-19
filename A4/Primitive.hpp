@@ -10,7 +10,7 @@ public:
 
 protected:
   // 10^-10
-  const double EPSILON = 0.001;
+  const double EPSILON = 0.0000000001;
 };
 
 class Sphere : public Primitive {
