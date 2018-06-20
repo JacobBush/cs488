@@ -3,6 +3,7 @@
 hide = gr.material({0.84, 0.6, 0.53}, {0.3, 0.3, 0.3}, 20)
 water = gr.material({0.0, 0.45, 0.75}, {0.3, 0.3, 0.3}, 25)
 moon_sand = gr.material({0.63, 0.65, 0.68}, {0.0, 0.0, 0.0}, 0)
+white = gr.material({0.9, 0.9, 0.9}, {0.5, 0.5, 0.5}, 20)
 
 scene_root = gr.node('root')
 
@@ -28,8 +29,15 @@ moon:scale(15.0,15.0,15.0)
 moon:set_material(moon_sand)
 scene_root:add_child(moon)
 
+cloud1 = gr.nh_box('cloud1', {0,0,0}, 1.0)
+cloud1:translate(0.45, 0.0, 0.0)
+cloud1:scale(5.0,5.0,5.0)
+cloud1:set_material(white)
+scene_root:add_child(cloud1)
+
+
 gr.render(scene_root,
-	  'sample-aa.png', 512, 512,
+	  'sample-aa.png', 150, 150,
 	  {0, 2, 30}, {0, 0, -1}, {0, 1, 0}, 50,
 	  {0.4, 0.4, 0.4}, {
 	  gr.light({200, 200, 0}, {0.1, 0.1, 0.8}, {1, 0, 0}),
