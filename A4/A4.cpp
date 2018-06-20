@@ -10,7 +10,7 @@ const uint MAX_HITS = 1;
 const uint NUM_SAMPLES = 1;
 const uint NUM_SAMPLES_EACH_DIR = (uint)glm::sqrt(NUM_SAMPLES);
 
-const double EPSILON = 0.001;
+const double EPSILON = 0.0001;
 const glm::vec3 ZERO_VECTOR3 = glm::vec3(0.0,0.0,0.0);
 
 double deg_to_rad(double deg) {
@@ -62,6 +62,7 @@ Intersection intersect(glm::vec3 a, glm::vec3 b, SceneNode *node) {
 	if (node->m_nodeType != NodeType::GeometryNode) return Intersection();
 	GeometryNode *geo_node = (GeometryNode *)node;
 	Intersection i =  Intersection(geo_node->m_primitive->intersection(a, b), geo_node);
+	i.local_intersection = ray_point_at_parameter(a,b,i.t);
 	if (!i.has_intersected || i.t < EPSILON) i = Intersection();
 	return i;
 }
@@ -100,6 +101,8 @@ glm::vec3 direct_light(const glm::vec3 &p, const glm::vec3 &N, Light *light, Sce
 	}
 
 	double dist = glm::length(surface_to_light);
+
+	//std::cout << glm::dot(glm::normalize(surface_to_light), N) << std::endl;
 
 	return light->colour * (glm::dot(glm::normalize(surface_to_light), N)) / 
 		   (light->falloff[0] + light->falloff[1]*dist + light->falloff[2]*dist*dist);
@@ -149,13 +152,41 @@ glm::vec3 get_color_of_intersection(Intersection intersection, glm::vec3 a, glm:
 
   	glm::vec3 col = ke + entrywise_multiply(kd, ambient); // ka = kd
 
+ 
   	glm::vec3 p = ray_point_at_parameter(a, b, intersection.t);
-  	
-  	glm::vec3 p_model = glm::vec3(intersection.invtrans * glm::vec4(p,1.0));
+/*
+  	if (isnan(p.x) || isnan(p.y) || isnan(p.z)) {
+  		std::cout << "p has nan" << std::endl;
+  	}
+ */ 	
+  	//std::cout << glm::to_string(intersection.invtrans) << std::endl;
+
+  	//glm::vec3 p_model = glm::vec3(intersection.invtrans * glm::vec4(p,1.0));
+
+	glm::vec3 p_model = intersection.local_intersection;
+
+	// if (isnan(p_model.x) || isnan(p_model.y) || isnan(p_model.z)) {
+ //  		std::cout << "p_model has nan" << std::endl;
+ //  	}
+
   	glm::vec3 N_model = intersection.node->m_primitive->get_normal_at_point(p_model);
 
-  	glm::vec3 N = glm::vec3(glm::transpose(intersection.invtrans) * glm::vec4(N_model,1.0));
-  	N = glm::normalize(N);
+  	// if (isnan(N_model.x) || isnan(N_model.y) || isnan(N_model.z)) {
+  	// 	std::cout << "N_model has nan" << std::endl;
+  	// }
+
+  	glm::vec3 N = glm::vec3(glm::transpose(intersection.invtrans) * glm::vec4(N_model, 1.0));
+  	if (!vector_equals(N, ZERO_VECTOR3)) {
+  		N = glm::normalize(N);
+  	}
+
+  	// if (isnan(N.x) || isnan(N.y) || isnan(N.z)) {
+  	// 	std::cout << "N has nan" << std::endl;
+  	// 	//std::cout << "p: " << glm::to_string(p) << std::endl;
+  	// 	std::cout << "p_model: " << glm::to_string(p_model) << std::endl;
+  	// 	std::cout << "N_model: " << glm::to_string(N_model) << std::endl;
+  	// 	std::cout << "N: " << glm::to_string(N) << std::endl;
+  	// }
 
   	if (!vector_equals(kd, ZERO_VECTOR3)) {
   		for (Light * light : lights) {

@@ -192,7 +192,7 @@ glm::vec3 Primitive::get_normal_at_point(glm::vec3 p) {
 }
 
 glm::vec3 Sphere::get_normal_at_point(glm::vec3 p) {
-	return glm::normalize(p);
+	return p;
 }
 
 glm::vec3 Cube::get_normal_at_point(glm::vec3 p) {
@@ -208,7 +208,7 @@ glm::vec3 Cube::get_normal_at_point(glm::vec3 p) {
 }
 
 glm::vec3 NonhierSphere::get_normal_at_point(glm::vec3 p) {
-	return glm::normalize(p - m_pos);
+	return p - m_pos;
 }
 
 glm::vec3 NonhierBox::get_normal_at_point(glm::vec3 p) {
