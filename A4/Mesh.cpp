@@ -170,6 +170,7 @@ Intersection Mesh::intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_in
 				continue;
 			}
 			i = Intersection(tprime);
+			if (i.tri != NULL) delete i.tri;
 			i.tri = new Triangle(tri.v1, tri.v2, tri.v3);
 		}
 	}

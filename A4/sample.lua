@@ -1,7 +1,7 @@
 -- 
 
 hide = gr.material({0.84, 0.6, 0.53}, {0.3, 0.3, 0.3}, 20)
-water = gr.material({0.0, 0.45, 0.75}, {0.2, 0.2, 0.4}, 10)
+water = gr.material({0.0, 0.45, 0.75}, {0.3, 0.3, 0.3}, 25)
 moon_sand = gr.material({0.63, 0.65, 0.68}, {0.0, 0.0, 0.0}, 0)
 
 scene_root = gr.node('root')
@@ -28,11 +28,8 @@ moon:scale(15.0,15.0,15.0)
 moon:set_material(moon_sand)
 scene_root:add_child(moon)
 
-
-
-
 gr.render(scene_root,
-	  'sample.png', 200, 200,
+	  'sample-aa.png', 512, 512,
 	  {0, 2, 30}, {0, 0, -1}, {0, 1, 0}, 50,
 	  {0.4, 0.4, 0.4}, {
 	  gr.light({200, 200, 0}, {0.1, 0.1, 0.8}, {1, 0, 0}),
