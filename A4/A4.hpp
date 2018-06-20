@@ -31,13 +31,14 @@ struct Intersection {
 	bool has_intersected;
 	double t; // the value to plug into parametric
 	GeometryNode *node; // what was hit
+	glm::mat4 invtrans;
 
-	Intersection(): has_intersected(false), t(nan("")), node(NULL) {}
+	Intersection(): has_intersected(false), t(nan("")), node(NULL), invtrans(glm::mat4()) {}
 
 	Intersection(bool has_intersected, double t, GeometryNode *node)
-		: has_intersected(has_intersected), t(t), node(node) {}
+		: has_intersected(has_intersected), t(t), node(node), invtrans(glm::mat4()) {}
 
-	Intersection(double t, GeometryNode *node): t(t), node(node) {
+	Intersection(double t, GeometryNode *node): t(t), node(node), invtrans(glm::mat4()) {
 		has_intersected = isnan(t) ? false : true;
 	}
 };

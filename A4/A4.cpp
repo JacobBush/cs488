@@ -10,7 +10,7 @@ const uint MAX_HITS = 1;
 const uint NUM_SAMPLES = 1;
 const uint NUM_SAMPLES_EACH_DIR = (uint)glm::sqrt(NUM_SAMPLES);
 
-const double EPSILON = 0.0001;
+const double EPSILON = 0.001;
 const glm::vec3 ZERO_VECTOR3 = glm::vec3(0.0,0.0,0.0);
 
 double deg_to_rad(double deg) {
@@ -27,10 +27,19 @@ bool vector_equals(const glm::vec3 &a, const glm::vec3 &b) {
 }
 
 glm::vec3 get_background_pixel (uint x, uint y, uint w, uint h) {
+	// Was just playing around, but this makes a really cool pattern
+	// different numbers give different patterns, with primes being
+	// the most interesting
+	// If the prime is low, you get extremely cool patterns
+	// For larger primes, you get a random-star effect
+	static const uint PRIME = 811;
+	if ((x + y)*(x - y) % PRIME == 0 && x < y) return glm::vec3(1.0);
+	if ((w + h - x - y)*(w - x - h + y) % PRIME == 0 && y < x) return glm::vec3(1.0);
+
 	return glm::vec3(
-		1.0 - 0.8 * (double)y / (double)h,
+		0.5 - 0.4 * (double)x / (double)w,
 		0.4 - 0.35 * (double)y / (double)h,
-		0.5 - 0.4 * (double)x / (double)w
+		1.0 - 0.8 * (double)y / (double)h
 	);
 }
 
@@ -49,20 +58,28 @@ glm::vec3 entrywise_multiply(const glm::vec3 &a, const glm::vec3 &b) {
 }
 
 
-Intersection intersect(glm::vec3 a, glm::vec3 b, SceneNode *node, SceneNode *disallowed_intersector) {
-	if (disallowed_intersector == node) return Intersection();
+Intersection intersect(glm::vec3 a, glm::vec3 b, SceneNode *node) {
 	if (node->m_nodeType != NodeType::GeometryNode) return Intersection();
-
 	GeometryNode *geo_node = (GeometryNode *)node;
-	return Intersection(geo_node->m_primitive->intersection(a, b), geo_node);
-
+	Intersection i =  Intersection(geo_node->m_primitive->intersection(a, b), geo_node);
+	if (!i.has_intersected || i.t < EPSILON) i = Intersection();
+	return i;
 }
 
-Intersection recursive_intersect(glm::vec3 a, glm::vec3 b, SceneNode *node, SceneNode *disallowed_intersector) {
+Intersection recursive_intersect(glm::vec3 a, glm::vec3 b, SceneNode *node, glm::mat4 parent_invtrans) {
 	// find intersects from ray defined by (b-a) = a -----> b
-	Intersection i = intersect(a, b, node, disallowed_intersector);
+
+	// already applied parent_trans recursively
+	a = glm::vec3(node->invtrans * glm::vec4(a,1));
+	b = glm::vec3(node->invtrans * glm::vec4(b,1));
+
+	glm::mat4 invtrans =  node->invtrans * parent_invtrans;
+
+	Intersection i = intersect(a, b, node);
+	i.invtrans = invtrans;
+	
 	for (SceneNode * child: node->children) {
-		Intersection iprime = recursive_intersect(a, b, child, disallowed_intersector);
+		Intersection iprime = recursive_intersect(a, b, child, invtrans);
 		if (!i.has_intersected || iprime.t < i.t) {
 			i = iprime;
 		}
@@ -70,14 +87,14 @@ Intersection recursive_intersect(glm::vec3 a, glm::vec3 b, SceneNode *node, Scen
 	return i;
 }
 
-glm::vec3 direct_light(const glm::vec3 &p, const glm::vec3 &N, Light *light, SceneNode *node, SceneNode *disallowed_intersector) {
+glm::vec3 direct_light(const glm::vec3 &p, const glm::vec3 &N, Light *light, SceneNode *node) {
 	glm::vec3 surface_to_light = light->position - p;
 
 	if (glm::dot(surface_to_light, N) <= 0) { // not on same side as light
 		return glm::vec3(0.0,0.0,0.0);
 	}
 	
-	Intersection intersection = recursive_intersect(p, light->position, node, disallowed_intersector);
+	Intersection intersection = recursive_intersect(p, light->position, node, glm::mat4());
 	if (intersection.has_intersected && intersection.t > 0.0 && intersection.t < 1.0) { // there's a shadow cast
 		return glm::vec3(0.0,0.0,0.0);
 	}
@@ -91,10 +108,10 @@ glm::vec3 direct_light(const glm::vec3 &p, const glm::vec3 &N, Light *light, Sce
 glm::vec3 get_reflected_color(glm::vec3 a, glm::vec3 p, glm::vec3 N,
 						      double shininess, const glm::vec3 & ambient,
 						      const std::list<Light *> & lights,
-							  uint hits_allowed, SceneNode * node, SceneNode * disallowed_intersector) {
+							  uint hits_allowed, SceneNode * node) {
   	glm::vec3 colour = glm::vec3(0.0,0.0,0.0);
   	for (Light * light : lights) {
-  		Intersection intersection = recursive_intersect(p, light->position, node, disallowed_intersector);
+  		Intersection intersection = recursive_intersect(p, light->position, node, glm::mat4());
 		if (intersection.has_intersected && intersection.t > 0.0 && intersection.t < 1.0) { // there's a shadow cast
 			continue;
 		}
@@ -133,18 +150,22 @@ glm::vec3 get_color_of_intersection(Intersection intersection, glm::vec3 a, glm:
   	glm::vec3 col = ke + entrywise_multiply(kd, ambient); // ka = kd
 
   	glm::vec3 p = ray_point_at_parameter(a, b, intersection.t);
-  	glm::vec3 N = intersection.node->m_primitive->get_normal_at_point(p);
+  	
+  	glm::vec3 p_model = glm::vec3(intersection.invtrans * glm::vec4(p,1.0));
+  	glm::vec3 N_model = intersection.node->m_primitive->get_normal_at_point(p_model);
+
+  	glm::vec3 N = glm::vec3(glm::transpose(intersection.invtrans) * glm::vec4(N_model,1.0));
+  	N = glm::normalize(N);
 
   	if (!vector_equals(kd, ZERO_VECTOR3)) {
   		for (Light * light : lights) {
-  			col += entrywise_multiply(kd, direct_light(p, N, light,node, intersection.node));
+  			col += entrywise_multiply(kd, direct_light(p, N, light,node));
   		}
   	}
 
   	if (!vector_equals(ks, ZERO_VECTOR3) && hits_allowed > 0) {
   		// Do a reflection
-  		glm::vec3 ref_col = get_reflected_color(a, p, N, shininess, ambient, lights,
-  												hits_allowed - 1, node, intersection.node);
+  		glm::vec3 ref_col = get_reflected_color(a, p, N, shininess, ambient, lights, hits_allowed - 1, node);
   		col += entrywise_multiply(ks, ref_col);
   	}
 
@@ -195,7 +216,7 @@ void ray_trace(uint x, uint y, uint w, uint h,
 					(double)y + (2.0 * (double)l + 1)/(2.0*(double)NUM_SAMPLES_EACH_DIR),
 					0.0, 1.0
 				));
-			Intersection intersection = recursive_intersect(eye, pixel, node, NULL);
+			Intersection intersection = recursive_intersect(eye, pixel, node, glm::mat4());
 			if (!intersection.has_intersected) {
 				color += get_background_pixel(x,y,w,h);
 			} else {

@@ -53,7 +53,7 @@ glm::vec3 Mesh::triangle_norm(const Triangle & tri) {
 	glm::vec3 a = m_vertices.at(tri.v1);
 	glm::vec3 b = m_vertices.at(tri.v2);
 	glm::vec3 c = m_vertices.at(tri.v3);
-	return glm::cross(b-a, c-a);
+	return glm::normalize(glm::cross(b-a, c-a));
 }
 
 bool Mesh::point_on_triangle(glm::vec3 p, const Triangle & tri) {
@@ -63,19 +63,25 @@ bool Mesh::point_on_triangle(glm::vec3 p, const Triangle & tri) {
 
 	glm::vec3 C0 = P1-P0;
 	glm::vec3 C1 = P2-P0;
-	glm::vec3 C2 = glm::vec3(1.0);
 	glm::vec3 R = p-P0;
 
-	double D = glm::determinant(glm::mat3(C0,C1,C2));
+	// Solve the 2 equation system
+	double D = glm::determinant(glm::mat2(glm::vec2(C0),glm::vec2(C1)));
 	if (glm::abs(D) < EPSILON) return false;
 
-	double D0 = glm::determinant(glm::mat3(R,C1,C2));
-	double D1 = glm::determinant(glm::mat3(C0,R,C2));
+	double D0 = glm::determinant(glm::mat2(glm::vec2(R),glm::vec2(C1)));
+	double D1 = glm::determinant(glm::mat2(glm::vec2(C0),glm::vec2(R)));
 
 	double beta = D0 / D;
 	double gamma = D1 / D;
 
-	return (beta >= -EPSILON && gamma >= -EPSILON && beta + gamma - 1 <= EPSILON);
+	if (beta >= -EPSILON && gamma >= -EPSILON && beta + gamma - 1.0 <= EPSILON) {
+		// Check to see that we satisfy the third equation
+		if (glm::abs(beta * C0.z + gamma * C1.z - R.z) < EPSILON) {
+			return true;
+		}
+	}
+	return false;
 }
 
 double Mesh::triangle_intersection(const Triangle & tri, glm::vec3 a, glm::vec3 b) {
@@ -99,7 +105,7 @@ double Mesh::triangle_intersection(const Triangle & tri, glm::vec3 a, glm::vec3 
 	double gamma = D1 / D;
 	double t = D2 / D;
 
-	if (beta >= -EPSILON && gamma >= -EPSILON && beta + gamma - 1 <= EPSILON) {
+	if (beta >= -EPSILON && gamma >= -EPSILON && beta + gamma - 1.0 <= EPSILON) {
 		return t;
 	} else {
 		return nan("");
