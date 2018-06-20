@@ -48,8 +48,8 @@ Mesh::Mesh( const std::string& fname )
 		}
 	}
 
-	glm::mat4 S = glm::scale(max-min + glm::vec3(2.0*EPSILON));
-	glm::mat4 T = glm::translate(min - glm::vec3(EPSILON));
+	glm::mat4 S = glm::scale(max-min + glm::vec3(2.0 * BB_EPSILON));
+	glm::mat4 T = glm::translate(min - glm::vec3(BB_EPSILON));
 
 	T_inv = new glm::mat4(glm::inverse(T * S));
 }
@@ -142,6 +142,10 @@ double Mesh::intersection(glm::vec3 a, glm::vec3 b) {
 	glm::vec3 aprime = glm::vec3(*T_inv * glm::vec4(a, 1));
 	glm::vec3 bprime = glm::vec3(*T_inv * glm::vec4(b, 1));
 
+	if (SPECIAL_BOUNDING_BOX_RENDERING) {
+		return Cube().intersection(aprime, bprime);
+	}
+
 	if (isnan(Cube().intersection(aprime, bprime))) {
 		// We don't hit bounding box
 		return nan("");
@@ -156,6 +160,10 @@ double Mesh::intersection(glm::vec3 a, glm::vec3 b) {
 }
 
 glm::vec3 Mesh::get_normal_at_point(glm::vec3 p) {
+	if (SPECIAL_BOUNDING_BOX_RENDERING) {
+		return Cube().get_normal_at_point(glm::vec3(*T_inv * glm::vec4(p, 1)));
+	}
+
 	for (Triangle tri : m_faces) {
 		if (point_on_triangle(p, tri)) {
 			return triangle_norm(tri);

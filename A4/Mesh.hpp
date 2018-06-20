@@ -8,6 +8,9 @@
 
 #include "Primitive.hpp"
 
+static const double BB_EPSILON = 0.0000001;
+static const bool SPECIAL_BOUNDING_BOX_RENDERING = false;
+
 struct Triangle
 {
 	size_t v1;
