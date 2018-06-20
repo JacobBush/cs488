@@ -10,7 +10,7 @@ const uint MAX_HITS = 1;
 const uint NUM_SAMPLES = 1;
 const uint NUM_SAMPLES_EACH_DIR = (uint)glm::sqrt(NUM_SAMPLES);
 
-const double EPSILON = 0.0001;
+const double EPSILON = 0.001;
 const glm::vec3 ZERO_VECTOR3 = glm::vec3(0.0,0.0,0.0);
 
 double deg_to_rad(double deg) {
@@ -58,16 +58,21 @@ glm::vec3 entrywise_multiply(const glm::vec3 &a, const glm::vec3 &b) {
 }
 
 
-Intersection intersect(glm::vec3 a, glm::vec3 b, SceneNode *node) {
+Intersection intersect(glm::vec3 a, glm::vec3 b, SceneNode *node,
+					   Intersection * prev_intersection) {
 	if (node->m_nodeType != NodeType::GeometryNode) return Intersection();
 	GeometryNode *geo_node = (GeometryNode *)node;
-	Intersection i =  Intersection(geo_node->m_primitive->intersection(a, b), geo_node);
-	i.local_intersection = ray_point_at_parameter(a,b,i.t);
-	if (!i.has_intersected || i.t < EPSILON) i = Intersection();
+	Intersection i = geo_node->m_primitive->intersection(a, b, prev_intersection);
+	i.node = geo_node;
+	
+	if (i.has_intersected) {
+		i.local_intersection = ray_point_at_parameter(a,b,i.t);
+	}
 	return i;
 }
 
-Intersection recursive_intersect(glm::vec3 a, glm::vec3 b, SceneNode *node, glm::mat4 parent_invtrans) {
+Intersection recursive_intersect(glm::vec3 a, glm::vec3 b, SceneNode *node, glm::mat4 parent_invtrans,
+								 Intersection * prev_intersection) {
 	// find intersects from ray defined by (b-a) = a -----> b
 
 	// already applied parent_trans recursively
@@ -76,11 +81,11 @@ Intersection recursive_intersect(glm::vec3 a, glm::vec3 b, SceneNode *node, glm:
 
 	glm::mat4 invtrans =  node->invtrans * parent_invtrans;
 
-	Intersection i = intersect(a, b, node);
+	Intersection i = intersect(a, b, node, prev_intersection);
 	i.invtrans = invtrans;
 	
 	for (SceneNode * child: node->children) {
-		Intersection iprime = recursive_intersect(a, b, child, invtrans);
+		Intersection iprime = recursive_intersect(a, b, child, invtrans, prev_intersection);
 		if (!i.has_intersected || iprime.t < i.t) {
 			i = iprime;
 		}
@@ -88,14 +93,14 @@ Intersection recursive_intersect(glm::vec3 a, glm::vec3 b, SceneNode *node, glm:
 	return i;
 }
 
-glm::vec3 direct_light(const glm::vec3 &p, const glm::vec3 &N, Light *light, SceneNode *node) {
+glm::vec3 direct_light(const glm::vec3 &p, const glm::vec3 &N, Light *light, SceneNode *node, Intersection * prev_intersection) {
 	glm::vec3 surface_to_light = light->position - p;
 
-	if (glm::dot(surface_to_light, N) <= 0) { // not on same side as light
+	if (glm::dot(surface_to_light, N) <= EPSILON) { // not on same side as light
 		return glm::vec3(0.0,0.0,0.0);
 	}
 	
-	Intersection intersection = recursive_intersect(p, light->position, node, glm::mat4());
+	Intersection intersection = recursive_intersect(p, light->position, node, glm::mat4(), prev_intersection);
 	if (intersection.has_intersected && intersection.t > 0.0 && intersection.t < 1.0) { // there's a shadow cast
 		return glm::vec3(0.0,0.0,0.0);
 	}
@@ -111,10 +116,11 @@ glm::vec3 direct_light(const glm::vec3 &p, const glm::vec3 &N, Light *light, Sce
 glm::vec3 get_reflected_color(glm::vec3 a, glm::vec3 p, glm::vec3 N,
 						      double shininess, const glm::vec3 & ambient,
 						      const std::list<Light *> & lights,
-							  uint hits_allowed, SceneNode * node) {
+							  uint hits_allowed, SceneNode * node,
+							  Intersection * prev_intersection) {
   	glm::vec3 colour = glm::vec3(0.0,0.0,0.0);
   	for (Light * light : lights) {
-  		Intersection intersection = recursive_intersect(p, light->position, node, glm::mat4());
+  		Intersection intersection = recursive_intersect(p, light->position, node, glm::mat4(), prev_intersection);
 		if (intersection.has_intersected && intersection.t > 0.0 && intersection.t < 1.0) { // there's a shadow cast
 			continue;
 		}
@@ -169,7 +175,7 @@ glm::vec3 get_color_of_intersection(Intersection intersection, glm::vec3 a, glm:
  //  		std::cout << "p_model has nan" << std::endl;
  //  	}
 
-  	glm::vec3 N_model = intersection.node->m_primitive->get_normal_at_point(p_model);
+  	glm::vec3 N_model = intersection.node->m_primitive->get_normal_at_point(p_model, &intersection);
 
   	// if (isnan(N_model.x) || isnan(N_model.y) || isnan(N_model.z)) {
   	// 	std::cout << "N_model has nan" << std::endl;
@@ -190,13 +196,13 @@ glm::vec3 get_color_of_intersection(Intersection intersection, glm::vec3 a, glm:
 
   	if (!vector_equals(kd, ZERO_VECTOR3)) {
   		for (Light * light : lights) {
-  			col += entrywise_multiply(kd, direct_light(p, N, light,node));
+  			col += entrywise_multiply(kd, direct_light(p, N, light,node, &intersection));
   		}
   	}
 
   	if (!vector_equals(ks, ZERO_VECTOR3) && hits_allowed > 0) {
   		// Do a reflection
-  		glm::vec3 ref_col = get_reflected_color(a, p, N, shininess, ambient, lights, hits_allowed - 1, node);
+  		glm::vec3 ref_col = get_reflected_color(a, p, N, shininess, ambient, lights, hits_allowed - 1, node, &intersection);
   		col += entrywise_multiply(ks, ref_col);
   	}
 
@@ -247,7 +253,7 @@ void ray_trace(uint x, uint y, uint w, uint h,
 					(double)y + (2.0 * (double)l + 1)/(2.0*(double)NUM_SAMPLES_EACH_DIR),
 					0.0, 1.0
 				));
-			Intersection intersection = recursive_intersect(eye, pixel, node, glm::mat4());
+			Intersection intersection = recursive_intersect(eye, pixel, node, glm::mat4(), NULL);
 			if (!intersection.has_intersected) {
 				color += get_background_pixel(x,y,w,h);
 			} else {

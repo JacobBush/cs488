@@ -22,24 +22,33 @@ Mesh::Mesh( const std::string& fname )
 	double vx, vy, vz;
 	size_t s1, s2, s3;
 
-	min = glm::vec3(std::numeric_limits<double>::max());
-	max = glm::vec3(std::numeric_limits<double>::min());
+	glm::vec3 min, max;
+	bool have_read_val = false;
 
 	std::ifstream ifs( fname.c_str() );
 	while( ifs >> code ) {
 		if( code == "v" ) {
-			ifs >> vx >> vy >> vz;
-			min = glm::vec3(
-				glm::min((double)min.x, vx),
-				glm::min((double)min.y, vy),
-				glm::min((double)min.z, vz)
-			);
 
-			max = glm::vec3(
-				glm::max((double)max.x, vx),
-				glm::max((double)max.y, vy),
-				glm::max((double)max.z, vz)
-			);
+			ifs >> vx >> vy >> vz;
+
+			// For bounding volume
+			if (have_read_val) {
+				min = glm::vec3(
+					glm::min((double)min.x, vx),
+					glm::min((double)min.y, vy),
+					glm::min((double)min.z, vz)
+				);
+
+				max = glm::vec3(
+					glm::max((double)max.x, vx),
+					glm::max((double)max.y, vy),
+					glm::max((double)max.z, vz)
+				);
+			} else {
+				min = glm::vec3(vx, vy, vz);
+				max = glm::vec3(vx, vy, vz);
+				have_read_val = true;
+			}
 
 			m_vertices.push_back( glm::vec3( vx, vy, vz ) );
 		} else if( code == "f" ) {
@@ -48,6 +57,7 @@ Mesh::Mesh( const std::string& fname )
 		}
 	}
 
+	// The buffer helps to deal simply with surgaces like planes
 	glm::mat4 S = glm::scale(max-min + glm::vec3(2.0 * BB_EPSILON));
 	glm::mat4 T = glm::translate(min - glm::vec3(BB_EPSILON));
 
@@ -93,7 +103,7 @@ bool Mesh::point_on_triangle(glm::vec3 p, const Triangle & tri) {
 	glm::vec3 R = p - P0;
 
 	double D = glm::determinant(glm::mat3(C0,C1,C2));
-	if (glm::abs(D) < EPSILON) return nan("");
+	if (glm::abs(D) < MESH_EPSILON) return nan("");
 
 	double D0 = glm::determinant(glm::mat3(R,C1,C2));
 	double D1 = glm::determinant(glm::mat3(C0,R,C2));
@@ -101,7 +111,7 @@ bool Mesh::point_on_triangle(glm::vec3 p, const Triangle & tri) {
 	double beta = D0 / D;
 	double gamma = D1 / D;
 
-	if (beta >= -EPSILON && gamma >= -EPSILON && beta + gamma - 1.0 <= EPSILON) {
+	if (beta >= -MESH_EPSILON && gamma >= -MESH_EPSILON && beta + gamma - 1.0 <= MESH_EPSILON) {
 		return true;
 	} else {
 		return false;
@@ -119,7 +129,7 @@ double Mesh::triangle_intersection(const Triangle & tri, glm::vec3 a, glm::vec3 
 	glm::vec3 R = a - P0;
 
 	double D = glm::determinant(glm::mat3(C0,C1,C2));
-	if (glm::abs(D) < EPSILON) return nan("");
+	if (glm::abs(D) < MESH_EPSILON) return nan("");
 
 	double D0 = glm::determinant(glm::mat3(R,C1,C2));
 	double D1 = glm::determinant(glm::mat3(C0,R,C2));
@@ -129,39 +139,53 @@ double Mesh::triangle_intersection(const Triangle & tri, glm::vec3 a, glm::vec3 
 	double gamma = D1 / D;
 	double t = D2 / D;
 
-	if (beta >= -EPSILON && gamma >= -EPSILON && beta + gamma - 1.0 <= EPSILON) {
+	if (beta >= -MESH_EPSILON && gamma >= -MESH_EPSILON && beta + gamma - 1.0 <= MESH_EPSILON) {
 		return t;
 	} else {
 		return nan("");
 	}
 }
 
-double Mesh::intersection(glm::vec3 a, glm::vec3 b) {
+Intersection Mesh::intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_intersection) {
 	// where (b-a) defines a ray.
 	
 	glm::vec3 aprime = glm::vec3(*T_inv * glm::vec4(a, 1));
 	glm::vec3 bprime = glm::vec3(*T_inv * glm::vec4(b, 1));
 
 	if (SPECIAL_BOUNDING_BOX_RENDERING) {
-		return Cube().intersection(aprime, bprime);
+		return Cube(true).intersection(aprime, bprime, prev_intersection);
 	}
 
-	if (isnan(Cube().intersection(aprime, bprime))) {
+	if (!Cube(true).intersection(aprime, bprime, prev_intersection).has_intersected) {
 		// We don't hit bounding box
-		return nan("");
+		return Intersection();
 	}
 
-	double t = nan("");
+	Intersection i = Intersection();
 	for (Triangle tri : m_faces) {
 		double tprime = triangle_intersection(tri, a, b);
-		if (isnan(t) || (!isnan(tprime) && tprime < t)) t = tprime;
+		if (!i.has_intersected || (!isnan(tprime) && tprime < i.t)) {
+			if (prev_intersection && prev_intersection->tri == &tri) {
+				// triangles shouldn't have self intersection
+				continue;
+			}
+			i = Intersection(tprime);
+			i.tri = new Triangle(tri.v1, tri.v2, tri.v3);
+		}
 	}
-	return t;
+	return i;
 }
 
-glm::vec3 Mesh::get_normal_at_point(glm::vec3 p) {
+glm::vec3 Mesh::get_normal_at_point(glm::vec3 p, Intersection *intersection) {
 	if (SPECIAL_BOUNDING_BOX_RENDERING) {
-		return Cube().get_normal_at_point(glm::vec3(*T_inv * glm::vec4(p, 1)));
+		glm::vec3 N_local = Cube(true).get_normal_at_point(glm::vec3(*T_inv * glm::vec4(p, 1)), intersection);
+		// We don't need to transform back, since cube always aligned with axes
+		return N_local;
+		//return glm::vec3(glm::transpose(*T) * glm::vec4(N_local,1.0));
+	}
+
+	if (intersection != NULL && intersection->tri != NULL) {
+		return triangle_norm(*(intersection->tri));
 	}
 
 	for (Triangle tri : m_faces) {

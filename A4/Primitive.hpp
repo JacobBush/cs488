@@ -1,16 +1,24 @@
 #pragma once
 
 #include <glm/glm.hpp>
+#include "Intersection.hpp"
 
 class Primitive {
 public:
   virtual ~Primitive();
-  virtual double intersection(glm::vec3 a, glm::vec3 b);
-  virtual glm::vec3 get_normal_at_point(glm::vec3 p);
+  virtual Intersection intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_intersection);
+  virtual glm::vec3 get_normal_at_point(glm::vec3 p, Intersection *intersection);
 
 protected:
   // 10^-10
   const double EPSILON = 0.001;
+  const double SPHERE_EPSILON = EPSILON / 50.0;
+  const double CUBE_BB_EPSILON = EPSILON / 10.0;
+  const double CUBE_EPSILON = EPSILON / 50.0;
+  const double PLANE_EPSILON = EPSILON / 50.0;
+  const double MESH_EPSILON = EPSILON / 50.0;
+
+
   double plane_intersection(glm::vec3 p0, glm::vec3 N, glm::vec3 a, glm::vec3 b);
   glm::vec3 ray_point_at_parameter(const glm::vec3 &a, const glm::vec3 &b, double t);
 };
@@ -18,15 +26,20 @@ protected:
 class Sphere : public Primitive {
 public:
   virtual ~Sphere();
-  double intersection(glm::vec3 a, glm::vec3 b) override;
-  glm::vec3 get_normal_at_point(glm::vec3 p) override;
+  Intersection intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_intersection) override;
+  glm::vec3 get_normal_at_point(glm::vec3 p, Intersection *intersection) override;
 };
 
 class Cube : public Primitive {
 public:
+  Cube() {}
+  Cube(bool isbb): is_bounding_box(isbb) {}
+
   virtual ~Cube();
-  double intersection(glm::vec3 a, glm::vec3 b) override;
-  glm::vec3 get_normal_at_point(glm::vec3 p) override;
+  Intersection intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_intersection) override;
+  glm::vec3 get_normal_at_point(glm::vec3 p, Intersection *intersection) override;
+
+  bool is_bounding_box;
 
 private:
   double intersect_side(uint side, bool front, glm::vec3 a, glm::vec3 b);
@@ -40,8 +53,8 @@ public:
   {
   }
   virtual ~NonhierSphere();
-  double intersection(glm::vec3 a, glm::vec3 b) override;
-  glm::vec3 get_normal_at_point(glm::vec3 p) override;
+  Intersection intersection(glm::vec3 a, glm::vec3 b,Intersection * prev_intersection) override;
+  glm::vec3 get_normal_at_point(glm::vec3 p, Intersection *intersection) override;
 
 private:
   glm::vec3 m_pos;
@@ -56,8 +69,8 @@ public:
   }
   
   virtual ~NonhierBox();
-  double intersection(glm::vec3 a, glm::vec3 b) override;
-  glm::vec3 get_normal_at_point(glm::vec3 p) override;
+  Intersection intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_intersection) override;
+  glm::vec3 get_normal_at_point(glm::vec3 p, Intersection *intersection) override;
 
 private:
   double intersect_side(uint side, bool front, glm::vec3 a, glm::vec3 b);

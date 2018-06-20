@@ -8,9 +8,6 @@
 
 #include "Primitive.hpp"
 
-static const double BB_EPSILON = 0.0000001;
-static const bool SPECIAL_BOUNDING_BOX_RENDERING = false;
-
 struct Triangle
 {
 	size_t v1;
@@ -29,8 +26,12 @@ class Mesh : public Primitive {
 public:
   ~Mesh();
   Mesh( const std::string& fname );
-  double intersection(glm::vec3 a, glm::vec3 b) override;
-  glm::vec3 get_normal_at_point(glm::vec3 p) override;
+  Intersection intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_intersection) override;
+  glm::vec3 get_normal_at_point(glm::vec3 p, Intersection *intersection) override;
+
+protected:
+	const double BB_EPSILON = CUBE_BB_EPSILON * 250.0;
+	const bool SPECIAL_BOUNDING_BOX_RENDERING = false;
   
 private:
     glm::vec3 triangle_norm(const Triangle & tri);
