@@ -1,12 +1,18 @@
 #include <iostream>
 #include <fstream>
 #include <math.h>
+#include <limits>
 
 #include <glm/ext.hpp>
 
 // #include "cs488-framework/ObjFileDecoder.hpp"
 #include "Mesh.hpp"
+#include "Primitive.hpp"
 
+
+Mesh::~Mesh() {
+	if (T_inv != NULL) delete T_inv;
+}
 
 Mesh::Mesh( const std::string& fname )
 	: m_vertices()
@@ -16,16 +22,36 @@ Mesh::Mesh( const std::string& fname )
 	double vx, vy, vz;
 	size_t s1, s2, s3;
 
+	min = glm::vec3(std::numeric_limits<double>::max());
+	max = glm::vec3(std::numeric_limits<double>::min());
+
 	std::ifstream ifs( fname.c_str() );
 	while( ifs >> code ) {
 		if( code == "v" ) {
 			ifs >> vx >> vy >> vz;
+			min = glm::vec3(
+				glm::min((double)min.x, vx),
+				glm::min((double)min.y, vy),
+				glm::min((double)min.z, vz)
+			);
+
+			max = glm::vec3(
+				glm::max((double)max.x, vx),
+				glm::max((double)max.y, vy),
+				glm::max((double)max.z, vz)
+			);
+
 			m_vertices.push_back( glm::vec3( vx, vy, vz ) );
 		} else if( code == "f" ) {
 			ifs >> s1 >> s2 >> s3;
 			m_faces.push_back( Triangle( s1 - 1, s2 - 1, s3 - 1 ) );
 		}
 	}
+
+	glm::mat4 S = glm::scale(max-min + glm::vec3(2.0*EPSILON));
+	glm::mat4 T = glm::translate(min - glm::vec3(EPSILON));
+
+	T_inv = new glm::mat4(glm::inverse(T * S));
 }
 
 std::ostream& operator<<(std::ostream& out, const Mesh& mesh)
@@ -112,6 +138,15 @@ double Mesh::triangle_intersection(const Triangle & tri, glm::vec3 a, glm::vec3 
 
 double Mesh::intersection(glm::vec3 a, glm::vec3 b) {
 	// where (b-a) defines a ray.
+	
+	glm::vec3 aprime = glm::vec3(*T_inv * glm::vec4(a, 1));
+	glm::vec3 bprime = glm::vec3(*T_inv * glm::vec4(b, 1));
+
+	if (isnan(Cube().intersection(aprime, bprime))) {
+		// We don't hit bounding box
+		return nan("");
+	}
+
 	double t = nan("");
 	for (Triangle tri : m_faces) {
 		double tprime = triangle_intersection(tri, a, b);

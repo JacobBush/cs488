@@ -24,6 +24,7 @@ struct Triangle
 // A polygonal mesh.
 class Mesh : public Primitive {
 public:
+  ~Mesh();
   Mesh( const std::string& fname );
   double intersection(glm::vec3 a, glm::vec3 b) override;
   glm::vec3 get_normal_at_point(glm::vec3 p) override;
@@ -35,6 +36,10 @@ private:
 
 	std::vector<glm::vec3> m_vertices;
 	std::vector<Triangle> m_faces;
+
+	glm::vec3 min, max; // for bounding box / sphere
+
+	glm::mat4 *T_inv;
 
     friend std::ostream& operator<<(std::ostream& out, const Mesh& mesh);
 };
