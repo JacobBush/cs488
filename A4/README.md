@@ -51,3 +51,5 @@ the cow jumping over the moon. There are three renders of this scene stored in t
  	- `screenshot.png`
 all of these as described above. Additional renders can be generated using the command
 `./A4 sample.lua` (If, for example, a higher or lower resolution image is desired).
+
+NOTE DID NOT HAVE TIME TO CREATE sample WITH AA - NO EXTRA FEATURE in PICTURES
