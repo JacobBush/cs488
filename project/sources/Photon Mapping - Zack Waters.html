@@ -1,0 +1,1241 @@
+
+<!-- saved from url=(0096)https://web.cs.wpi.edu/~emmanuel/courses/cs563/write_ups/zackw/photon_mapping/PhotonMapping.html -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<title>Photon Mapping - Zack Waters</title>
+<style type="text/css">
+H1 { font-size: 30pt; color: #eeeeee; }
+H2 { font-size: 18pt; color: #ffffff; }
+H3 { font-size: 14pt; color: #ffffff; }
+</style>
+
+<link type="text/css" rel="stylesheet" href="chrome-extension://pioclpoplcdbaefihamjohnefbikjilc/content.css"><link rel="stylesheet" type="text/css" href="chrome-extension://immhpnclomdloikkpcefncmfgjbkojmh/css/emoji.css"></head>
+
+
+
+<body bgcolor="#44444444" text="#FFFFFFFF" link="#555555" vlink="#555555">
+
+<table border="0" cellpadding="10" cellspacing="0" width="100%" bgcolor="#44444444">
+<tbody><tr>
+   <td align="center"><h1><font face="Helvetica">Photon Mapping</font>
+    <font face="Helvetica" size="3"><br>
+    Zack Waters    
+    </font>
+        
+    </h1>
+        
+   </td>
+</tr>
+</tbody></table>
+
+<font face="Helvetica" size="3">
+
+<font face="Helvetica">
+
+<hr>
+<font face="Helvetica" size="3">
+
+   </font><font face="Helvetica">
+
+<font face="Helvetica" size="3">
+
+        </font>
+
+<font face="Helvetica" size="3">
+
+        </font>
+        </font><font face="Helvetica" size="3">
+
+        </font><font face="Helvetica" size="3">
+
+</font><font face="Helvetica" size="3"><font face="Helvetica" size="3">
+
+</font></font><font face="Helvetica" size="3"><font face="Helvetica" size="3">
+
+</font></font><table align="center" width="800" border="0" cellpadding="0" cellspacing="0" bgcolor="#44444444" height="6165">
+<tbody><tr>
+   <td align="left" width="798" height="28"> <h2>Introduction</h2>
+</td></tr>
+
+
+
+
+
+
+
+
+<tr>
+   <td align="left" width="798" height="21">
+
+<font face="Helvetica">
+
+Global illumination is critical in generating synthetic
+   images that are indistinguishable from images taken of the real world.<span style="mso-spacerun:yes">&nbsp;
+   </span>Two major categories for GI algorithms are radiosity methods and point
+   sampling techniques such as path tracing.<span style="mso-spacerun:yes">&nbsp;
+   </span>Global illumination algorithms are designed to approximate the
+   rendering equation which describes the complete transport of light within an
+   environment.</font>  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   &nbsp;  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   <font face="Helvetica" size="3">
+
+</font><table border="0" width="102%">
+    <tbody><tr>
+      <td width="41%" valign="top">
+
+        
+
+      <img border="0" src="./Photon Mapping - Zack Waters_files/cornelltestballs_small.png" width="300" height="300"></td>
+
+<td width="59%" valign="top"><font face="Helvetica">Radiosity is a finite element method that computes a
+   view independent GI solution as a finite mesh.<span style="mso-spacerun:yes">&nbsp;
+   </span>The environment is divided up into patches that are uniform and
+   perfectly diffuse and energy is transferred amongst these patches until
+   equalized.<span style="mso-spacerun:yes">&nbsp; </span>This tight coupling of
+   the lighting information to the geometry is costly to calculate and meshing
+   artifacts can occur if not carefully constructed.<span style="mso-spacerun:yes">&nbsp;
+   </span>Radiosity also doesn’t handle arbitrary reflection models.</font>
+
+<font face="Helvetica">
+
+   <p class="MsoNormal">Path tracing is a probabilistic view dependent point
+   sampling technique that extends raytracing to approximate all light paths
+   such as those that contribute to indirect illumination and caustics.<span style="mso-spacerun:yes">&nbsp;
+   </span>The scene is rendered by tracing a set of ray paths from the eye back
+   to the lights, where each path does not branch.<span style="mso-spacerun:yes">&nbsp;
+   </span>Path tracing is a random process where each path is a simple random
+   walk and thus a Markov chain.<span style="mso-spacerun:yes">&nbsp; </span>Path
+   tracing can be very computationally expensive as a large number of samples
+   are needed to converge or variance will show up as noise in the final image.</p>
+  </font></td>
+    </tr>
+   </tbody></table><font face="Helvetica" size="3">
+   </font></td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   &nbsp;  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+
+<font face="Helvetica">
+
+   <p class="MsoNormal">Fortunately, <st1:place>
+   Monte Carlo</st1:place>
+   techniques have been around for a long time and there are several techniques
+   that can be borrowed to reduce variance and achieve convergence in a finite
+   number of steps.<span style="mso-spacerun:yes">&nbsp; </span>Most notable are
+   importance sampling and Russian roulette. <span style="mso-spacerun:yes">&nbsp;</span>Other
+   optimization strategies to further reduce computational costs include
+   irradiance caching and irradiance gradients.<span style="mso-spacerun:yes">&nbsp;
+   </span>Even with these optimizations path traced images are still plagued with
+   high frequency noise generated by caustics.
+
+   </p>
+   </font><p class="MsoNormal"><font face="Helvetica">Photon Mapping is a two pass global illumination
+   algorithm developed by Henrik Jensen as an efficient alternative to pure <st1:place>
+   Monte Carlo</st1:place>
+   raytracing techniques.<span style="mso-spacerun:yes">&nbsp; </span>Photon
+   mapping decouples the illumination solution from the geometry and the
+   solution is represented in a spatial data structure called the photon map.<span style="mso-spacerun:yes">&nbsp;
+   </span>This decoupling proves to be quite powerful as the rendering
+   equation’s terms can be calculated separately and stored into separate
+   photon maps.<span style="mso-spacerun:yes">&nbsp; </span>It also is the
+   reason that Photon mapping is very flexible as parts of the rendering
+   equation can be solved using other techniques.</font>&nbsp; <font face="Helvetica" size="3">Photon mapping has
+   also been extended to account for
+   participating media effects such as sub-surface scattering and volume
+   caustics.
+
+   </font>
+
+   </p>
+<p class="MsoNormal"><font face="Helvetica" size="3">In this write-up I plan to
+give an over-view of the two passes of Photon Mapping.&nbsp; I will not touch
+upon participating media and the various optimizations relating to photon
+mapping and uses in other algorithms.</font>
+
+   </p>
+
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   &nbsp;  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="28">
+   <h2>First Pass - Photon Tracing</h2>
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="59">
+   Photon tracing is the process of emitting
+   discrete photons from the light sources and tracing them through the scene.&nbsp;
+   The primary goal of this pass is to populate the photon maps that are
+   used in the rendering pass to calculate the reflected radiance at surfaces
+   and out-scattered radiance in participating media.  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   &nbsp;  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="24">
+   <h3>Photon Emission</h3>
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="78">
+   <p class="MsoNormal">A photon’s life begins at the light source.<span style="mso-spacerun:yes">&nbsp;
+   </span>For each light source in the scene we create a set of photons and
+   divide the overall power of the light source amongst them.<span style="mso-spacerun:yes">&nbsp;
+   </span>Brighter lights emit more photons then dimmer lights.<span style="mso-spacerun:yes">&nbsp;
+   </span>Finding the number of photons to create at each light depends largely
+   on whether decent radiance estimates can be made during the rendering pass.<span style="mso-spacerun:yes">&nbsp;
+   </span>For good radiance estimates the local density of the photons at
+   surfaces need to provide a good statistic of the illumination.</p>
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   &nbsp;  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="187">
+   <table border="0" width="100%">
+    <tbody><tr>
+      <td width="100%">
+        <p align="center"><img border="0" src="./Photon Mapping - Zack Waters_files/fig3.gif" width="600" height="156"></p></td>
+    </tr>
+
+        
+
+   <tr>
+    <td width="100%"><font face="Helvetica" size="2">Figure recreated from [1]</font></td>
+   </tr>
+   </tbody></table>
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   &nbsp;  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="230">
+
+<font face="Helvetica" size="3">
+
+   <p class="MsoNormal">
+   Jensen states that any type of light source can be used and describes several
+   emission models.<span style="mso-spacerun:yes">&nbsp; </span>For point light
+   sources we want to emit photons uniformly in all directions.<span style="mso-spacerun:yes">&nbsp;
+   </span>For area light sources we pick a random position on the surface and
+   then pick a random direction in the hemisphere above this position.</p>
+   <p class="MsoNormal"><o:p>
+   The emission strategy can be changed depending on the scene.<span style="mso-spacerun:yes">&nbsp;
+   </span>For example, for sparse scenes we want to focus our photon emission at
+   the geometry or most photons will be lost.<span style="mso-spacerun:yes">&nbsp;
+   </span>Jensen’s solution to this is to use projection maps.<span style="mso-spacerun:yes">&nbsp;
+   </span>Projection maps optimize photon emission by directing photons towards
+   important objects.<span style="mso-spacerun:yes">&nbsp; </span>Projection
+   maps are typically implemented as bitmaps that are warped onto a bounding
+   shape for the light source where each bit determines whether geometry of
+   importance is in that direction.</o:p></p>
+   </font><p class="MsoNormal"><font face="Helvetica" size="3"><o:p>
+   <span style="font-size:12.0pt;font-family:&quot;Times New Roman&quot;;mso-fareast-font-family:
+&quot;Times New Roman&quot;;mso-ansi-language:EN-US;mso-fareast-language:EN-US;
+mso-bidi-language:AR-SA">Projection maps are also very important for effects
+   such as caustics.<span style="mso-spacerun:yes">&nbsp; </span>Caustics are
+   generated from focused light coming from specular surfaces and require a
+   higher density of photons for an accurate radiance estimate.<span style="mso-spacerun:yes">&nbsp;
+   </span>With projection maps we can focus more photons towards specular
+   surfaces.</span>  
+
+        </o:p></font>
+
+   </p></td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   &nbsp;  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="24">
+   <h3>Photon Scattering</h3>
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="59">
+   <p class="MsoNormal">Emitted photons from light sources are scattered through
+   a scene and are eventually absorbed or lost.<span style="mso-spacerun:yes">&nbsp;
+   </span>When a photon hits a surface we can decide how much of its energy is
+   absorbed, reflected and refracted based on the surface’s material
+   properties.  
+   </p></td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   &nbsp;  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+
+<img border="0" src="./Photon Mapping - Zack Waters_files/fig5.gif" width="450" height="291">  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   &nbsp;  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="135">
+
+<font face="Helvetica" size="3">
+
+<p class="MsoNormal"><o:p>To account for the
+   distribution of the photon’s energy at the surface we can break it up into
+   smaller photons as needed.&nbsp; However, it is easy to see that the generation of new photons at each surface interaction
+will be very costly in terms of computation and storage.<span style="mso-spacerun:yes">&nbsp;
+</span>Instead, Jensen advocates using a standard <st1:place>
+Monte Carlo</st1:place>
+ technique called Russian Roulette.<span style="mso-spacerun:yes">&nbsp; </span>We
+use Russian Roulette to probabilistically decide whether photons are reflected,
+refracted or absorbed.<span style="mso-spacerun:yes">&nbsp; </span>Using this
+technique we reduce both the computational and storage costs while still
+obtaining the correct result.</o:p></p>
+</font><p class="MsoNormal"><font face="Helvetica" size="3"><o:p>
+To see why Russian Roulette works Jensen gives the following example. Given a
+probability, <i style="mso-bidi-font-style:normal">p</i>, that another radiance
+estimate, <i style="mso-bidi-font-style:normal">Ln</i>, is made we find that:
+        </o:p></font>  
+   </p></td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   &nbsp;  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="191">
+   <blockquote>
+    <img border="0" src="./Photon Mapping - Zack Waters_files/eq1.gif" width="591" height="170">
+   </blockquote>
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   &nbsp;  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   The expected value for the next radiance estimate is calculated as follows.  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   &nbsp;  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="90">
+   <blockquote>
+    <img border="0" src="./Photon Mapping - Zack Waters_files/eq2.gif" width="575" height="69">
+   </blockquote>
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   &nbsp;  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="40">
+   L is computed by tracing another ray and is weighted by its probability.<span style="mso-spacerun:yes">&nbsp;
+   </span>The probability of taking another radiance estimate is <i style="mso-bidi-font-style:normal">p</i>,
+   otherwise <i style="mso-bidi-font-style:normal">(1–p).</i><o:p>
+   </o:p>
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   &nbsp;  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="91">
+   <blockquote>
+    <img border="0" src="./Photon Mapping - Zack Waters_files/eq3.gif" width="348" height="70">
+   </blockquote>
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   &nbsp;  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="40">
+   <span style="font-size:12.0pt;font-family:&quot;Times New Roman&quot;;
+mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:EN-US;mso-fareast-language:
+EN-US;mso-bidi-language:AR-SA">The probability events we are concerned with in
+   Photon Mapping are whether photons are absorbed, reflected or refracted.<span style="mso-spacerun:yes">&nbsp;
+   </span>If we only consider the probability events for reflection and
+   absorption we have the following.</span>  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   &nbsp;  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="303">
+   <blockquote>
+    <img border="0" src="./Photon Mapping - Zack Waters_files/eq4.gif" width="437" height="282">
+   </blockquote>
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   &nbsp;  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="211">
+   <p class="MsoNormal">It is important to note that the power of the reflected
+   photon is not modified.<span style="mso-spacerun:yes">&nbsp; </span>Correctness
+   of the overall result will converge with more samples.<span style="mso-spacerun:yes">&nbsp;
+   </span>The probability is given by the reflectivity of a surface.<span style="mso-spacerun:yes">&nbsp;
+   </span>If the reflectivity for a surface is 0.5 then 50% of the photons will
+   be reflected at full power while the other 50% will be absorbed.<span style="mso-spacerun:yes">&nbsp;
+   </span>To show why Russian Roulette reduces computational and storage costs
+   let’s consider shooting 1000 photons at a surface with reflectivity of 0.5.<span style="mso-spacerun:yes">&nbsp;
+   </span>We could reflect 1000 photons at half power or we can reflect 500 at
+   full power using Russian Roulette.</p>
+   <p class="MsoNormal"><o:p>In typical environments there are more probability events we need to
+   consider.<span style="mso-spacerun:yes">&nbsp; </span>For example, what is
+   the probability for a photon to be refracted through a surface?<span style="mso-spacerun:yes">&nbsp;
+   </span>Are we dealing with a diffuse or specular reflection or transmission?<span style="mso-spacerun:yes">&nbsp;
+   </span>To handle these events we can divide our distribution domain according
+   to the material properties of a surface.</o:p>
+   </p>
+   <p class="MsoNormal">Considering only diffuse and specular reflection and
+   absorption we have the following domain  
+   </p></td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   &nbsp;  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   <blockquote>
+    <img border="0" src="./Photon Mapping - Zack Waters_files/fig4.gif" width="450" height="82">
+   </blockquote>
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   Again, we decide what to do with the photon by generating a random number
+   within the domain.&nbsp; For more information see [1].  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   &nbsp;  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="24">
+   <h3>Photon Storing</h3>
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="173">
+   <p class="MsoNormal">For a given scene we may shoot millions of photons from
+   the light sources.<span style="mso-spacerun:yes">&nbsp; </span>It is
+   desirable that our photon map is compact to reduce the storage costs.<span style="mso-spacerun:yes">&nbsp;
+   </span>We also want it to support fast three dimensional spatial searches as
+   we will need to query the photon map millions of times during the rendering
+   phase.
+   </p>
+   <p class="MsoNormal">The data structure that Jensen recommends using for the
+   photon map is a kd-tree.<span style="mso-spacerun:yes">&nbsp; </span>It is
+   one of the few data structures that is ideal for handling non-uniform
+   distributions of photons.<span style="mso-spacerun:yes">&nbsp; </span>The
+   worst-case complexity of locating photons in a kd-tree is O(n) where as if it
+   is balanced it is O(log n).<span style="mso-spacerun:yes">&nbsp; </span>After
+   all photons are stored in the map we want to make sure it is balanced.
+   </p>
+   <p class="MsoNormal">For each photon we store its position, power, and
+   incident direction.<span style="mso-spacerun:yes">&nbsp; </span>Jensen
+   proposes the following structure.  
+   </p></td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   &nbsp;  
+   </td>
+</tr>
+
+        
+
+<tr>
+   <td align="left" width="798" bgcolor="#555555" height="98">
+   <p class="Code"><font face="Courier New" size="2" color="#ffffff">struct
+   photon {<span style="mso-spacerun:yes"><br>
+   &nbsp;&nbsp;&nbsp; </span>float x, y, z;<span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+   </span>// position ( 3 x 32 bit floats )<br>
+   &nbsp;&nbsp;&nbsp; char p[4];<span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+   </span>// power(rgb) packed as 4 chars<br>
+   <span style="mso-spacerun: yes">&nbsp;&nbsp;&nbsp; </span>char phi, theta;<span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp;&nbsp;
+   </span>// compressed incident direction<span style="mso-spacerun:yes"><br>
+   &nbsp;&nbsp;&nbsp; </span>short flag;<span style="mso-spacerun:yes">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+   </span>// flag used for kd-tree<br>
+   }</font>  
+   </p></td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   &nbsp;  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="116">
+   <p class="MsoNormal">Jensen prescribes Ward’s shared-exponent RGB format
+   for packing the power into 4 bytes.<span style="mso-spacerun:yes">&nbsp; </span>The
+   phi and theta are spherical coordinates that mapped to 65536 possible
+   directions.<span style="mso-spacerun:yes">&nbsp; </span>The position can
+   possibly be compressed further into a 24bit fixed point format.
+   </p>
+   <p class="MsoNormal">However, for most serious implementations the structure
+   will be as compressed as possible to allow for extremely large and complex
+   scenes.<span style="mso-spacerun:yes">&nbsp; </span>For naïve renderers the
+   structure can remain largely uncompressed for ease of use.  
+   </p></td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   &nbsp;  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="28">
+   <h2>Second Pass - Rendering</h2>
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="40">
+   Photon mapping is used to calculate the effects of indirect lighting and
+   caustics.<span style="mso-spacerun:yes">&nbsp; </span>Too many photons would
+   be needed in the photon map to accurately handle specular/glossy surfaces and
+   direct lighting.  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   &nbsp;  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="24">
+   <h3>Approximating the Rendering Equation</h3>
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="40">
+   During the rendering pass we are using an approximation of the rendering
+   equation to compute the reflected radiance at surface locations.<span style="mso-spacerun:yes">&nbsp;
+   </span>The rendering equation in the form that is typically used is described
+   as:  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   &nbsp;  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="78">
+   <blockquote>
+    <img border="0" src="./Photon Mapping - Zack Waters_files/eq5.gif" width="397" height="57">
+   </blockquote>
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   &nbsp;  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   where:  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   &nbsp;  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="307">
+   <blockquote>
+    <img border="0" src="./Photon Mapping - Zack Waters_files/eq5desc.gif" width="806" height="286">
+   </blockquote>
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   &nbsp;  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   In the above equation we are integrating over the hemisphere above x the
+   incoming radiance per solid angle as seen by x.  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   &nbsp;  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="230">
+   <p align="center"><img border="0" src="./Photon Mapping - Zack Waters_files/fig1.gif" align="left" width="400" height="228"></p>
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   &nbsp;  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   We can use density estimation to estimate the illumination by querying for
+   the nearest N photons from the photon map.  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   &nbsp;  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="262">
+   <img border="0" src="./Photon Mapping - Zack Waters_files/fig2.gif" width="450" height="260">  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   &nbsp;  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="59">
+   This density estimate gives us the incoming flux or irradiance.<span style="mso-spacerun:yes">&nbsp;
+   </span>If we ignore the wave phenomenon of light and time then irradiance
+   basically tells us how much light is arriving at a particular area.<span style="mso-spacerun:yes">&nbsp;
+   </span>In other words incident irradiance, Ei, is the sum of the number of
+   photons, <span style="position:relative;top:6.0pt;mso-text-raise:-6.0pt"><!--[if gte vml 1]><v:shapetype
+ id="_x0000_t75" coordsize="21600,21600" o:spt="75" o:preferrelative="t"
+ path="m@4@5l@4@11@9@11@9@5xe" filled="f" stroked="f">
+ <v:stroke joinstyle="miter"/>
+ <v:formulas>
+  <v:f eqn="if lineDrawn pixelLineWidth 0"/>
+  <v:f eqn="sum @0 1 0"/>
+  <v:f eqn="sum 0 0 @1"/>
+  <v:f eqn="prod @2 1 2"/>
+  <v:f eqn="prod @3 21600 pixelWidth"/>
+  <v:f eqn="prod @3 21600 pixelHeight"/>
+  <v:f eqn="sum @0 0 1"/>
+  <v:f eqn="prod @6 1 2"/>
+  <v:f eqn="prod @7 21600 pixelWidth"/>
+  <v:f eqn="sum @8 21600 0"/>
+  <v:f eqn="prod @7 21600 pixelHeight"/>
+  <v:f eqn="sum @10 21600 0"/>
+ </v:formulas>
+ <v:path o:extrusionok="f" gradientshapeok="t" o:connecttype="rect"/>
+ <o:lock v:ext="edit" aspectratio="t"/>
+</v:shapetype><v:shape id="_x0000_i1025" type="#_x0000_t75" style='width:15.75pt;
+ height:18pt' o:ole="">
+ <v:imagedata src="file:///C:\DOCUME~1\zwaters\LOCALS~1\Temp\msohtml1\01\clip_image001.wmz"
+  o:title=""/>
+</v:shape><![endif]-->
+   omega sub i</span><!--[if gte mso 9]><xml>
+ <o:OLEObject Type="Embed" ProgID="Equation.3" ShapeID="_x0000_i1025"
+  DrawAspect="Content" ObjectID="_1111058949">
+ </o:OLEObject>
+</xml><![endif]-->
+   , arriving per unit area.  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   &nbsp;  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="89">
+   <blockquote>
+    <img border="0" src="./Photon Mapping - Zack Waters_files/eq6.gif" width="121" height="68">
+   </blockquote>
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   &nbsp;  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   With a differential solid angle, dw' <span style="position:relative;
+top:3.0pt;mso-text-raise:-3.0pt"><!--[if gte vml 1]><v:shapetype id="_x0000_t75"
+ coordsize="21600,21600" o:spt="75" o:preferrelative="t" path="m@4@5l@4@11@9@11@9@5xe"
+ filled="f" stroked="f">
+ <v:stroke joinstyle="miter"/>
+ <v:formulas>
+  <v:f eqn="if lineDrawn pixelLineWidth 0"/>
+  <v:f eqn="sum @0 1 0"/>
+  <v:f eqn="sum 0 0 @1"/>
+  <v:f eqn="prod @2 1 2"/>
+  <v:f eqn="prod @3 21600 pixelWidth"/>
+  <v:f eqn="prod @3 21600 pixelHeight"/>
+  <v:f eqn="sum @0 0 1"/>
+  <v:f eqn="prod @6 1 2"/>
+  <v:f eqn="prod @7 21600 pixelWidth"/>
+  <v:f eqn="sum @8 21600 0"/>
+  <v:f eqn="prod @7 21600 pixelHeight"/>
+  <v:f eqn="sum @10 21600 0"/>
+ </v:formulas>
+ <v:path o:extrusionok="f" gradientshapeok="t" o:connecttype="rect"/>
+ <o:lock v:ext="edit" aspectratio="t"/>
+</v:shapetype><v:shape id="_x0000_i1025" type="#_x0000_t75" style='width:21pt;
+ height:14.25pt' o:ole="">
+ <v:imagedata src="file:///C:\DOCUME~1\zwaters\LOCALS~1\Temp\msohtml1\01\clip_image001.wmz"
+  o:title=""/>
+</v:shape><![endif]--></span>, the differential irradiance, <span style="position:relative;
+top:6.0pt;mso-text-raise:-6.0pt"><!--[if gte vml 1]><v:shape id="_x0000_i1026"
+ type="#_x0000_t75" style='width:18.75pt;height:18pt' o:ole="">
+ <v:imagedata src="file:///C:\DOCUME~1\zwaters\LOCALS~1\Temp\msohtml1\01\clip_image003.wmz"
+  o:title=""/>
+</v:shape><![endif]-->
+   dEi</span><!--[if gte mso 9]><xml>
+ <o:OLEObject Type="Embed" ProgID="Equation.3" ShapeID="_x0000_i1026"
+  DrawAspect="Content" ObjectID="_1111058986">
+ </o:OLEObject>
+</xml><![endif]-->
+   , can be expressed in terms of incident radiance Li as:  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   &nbsp;  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="90">
+   <blockquote>
+    <img border="0" src="./Photon Mapping - Zack Waters_files/eq7.gif" width="532" height="69">
+   </blockquote>
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   &nbsp;  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   <span style="font-size:12.0pt;font-family:&quot;Times New Roman&quot;;
+mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:EN-US;mso-fareast-language:
+EN-US;mso-bidi-language:AR-SA">Using this relationship we can substitute for Li
+   in the rendering equation:</span>  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   &nbsp;  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="89">
+   <blockquote>
+    <img border="0" src="./Photon Mapping - Zack Waters_files/eq8.gif" width="419" height="68">
+   </blockquote>
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   &nbsp;  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   canceling out the terms we have:  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   &nbsp;  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="78">
+   <blockquote>
+    <img border="0" src="./Photon Mapping - Zack Waters_files/eq9.gif" width="307" height="57">
+   </blockquote>
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   &nbsp;  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="40">
+   Using information from our nearest neighbor query gives us a set of N photons
+   for a given area A in which we know the incident direction for each.<span style="mso-spacerun:yes">&nbsp;
+   </span>This gives us the following approximation:  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   &nbsp;  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="89">
+   <blockquote>
+    <img border="0" src="./Photon Mapping - Zack Waters_files/eq10.gif" width="365" height="68">
+   </blockquote>
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   &nbsp;  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="135">
+   <p class="MsoNormal">In order to get a good radiance estimate we need a
+   sufficient number of photons in our density estimate.<span style="mso-spacerun:yes">&nbsp;
+   </span>Of course this can directly relate to the number of photons that are
+   emitted from the light sources.<span style="mso-spacerun:yes">&nbsp; </span>The
+   more photons that are used the more accurate is our estimate.<span style="mso-spacerun:yes">&nbsp;
+   </span>We also need to be careful how we collect photons.
+   </p>
+   <p class="MsoNormal">The main idea behind gathering photons is that we are
+   hoping to get an idea of what the illumination at x is by examining the
+   nearest N photons.<span style="mso-spacerun:yes">&nbsp; </span>If we include
+   photons from other surfaces, with drastically different surface normals, or
+   from volumes in our estimate then we can degrade the accuracy of our
+   estimate.  
+   </p></td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   &nbsp;  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   <h3>Caustics</h3>
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   Rendering caustics is fairly straightforward as you can directly visualize
+   the photon map.&nbsp; Visualizing the photon map directly basically means we
+   gather N nearest photons and estimate the radiance directly from that
+   information using the last equation from the previous section.&nbsp; During
+   the photon tracing phase a separate photon map is used for caustics.&nbsp;
+   Otherwise many more photons would be needed in a single photon map to produce
+   good caustics.&nbsp; For sharper caustics a filter can be used such as cone
+   filter where more closer photons are weighted more then photons that are
+   father from point x.  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   &nbsp;  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   <p align="center"><u>click on images to enlarge</u>  
+   </p></td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   <table border="0" width="100%">
+    <tbody><tr>
+      <td width="50%">
+        <p align="center"><a href="https://web.cs.wpi.edu/~emmanuel/courses/cs563/write_ups/zackw/photon_mapping/images/photonmapping/cornellwater_large.png"><img border="0" src="./Photon Mapping - Zack Waters_files/cornellwater.png" width="300" height="300"></a></p></td>
+      <td width="50%">
+        <p align="center"><a href="https://web.cs.wpi.edu/~emmanuel/courses/cs563/write_ups/zackw/photon_mapping/images/photonmapping/cornellcaustic_large.png"><img border="0" src="./Photon Mapping - Zack Waters_files/cornellcaustic.png" width="300" height="300"></a></p></td>
+    </tr>
+    <tr>
+      <td width="50%"></td>
+      <td width="50%"></td>
+    </tr>
+   </tbody></table>
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   &nbsp;  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   <h3>Indirect Illumination</h3>
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   Indirect illumination is much trickier to get right.&nbsp; In this case, the
+   information from the photon map can be used in a more accurate solution such
+   as path tracing.&nbsp; However, good results can be obtained using photon
+   mapping directly.&nbsp; Often times a final gathering step is employed to
+   improve the results using the photon map.&nbsp; During the final gather step
+   we can sample the hemisphere above the surface at x for incoming
+   radiance.&nbsp; For each sample we can compute a radiance estimate directly
+   from the photon map.&nbsp; The first image in this write-up uses this
+   technique as well as the image on the right in the previous section.
+   <p>However, even without a final gather step it is possible to achieve images
+   such as the one below.&nbsp; The image on the left shows the contribution
+   from direct lighting only and the image on the right was rendered using
+   photon mapping.&nbsp; The image on the right does not use a final gather
+   step.&nbsp; Only 26,000 photons actually made it into the window and 500 were
+   used in the radiance estimate.&nbsp; Notice the color bleeding on the yellow
+   ball and on the floor.  
+   </p></td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   &nbsp;  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   <p align="center">
+
+<font face="Helvetica" size="3">
+
+<u>click on images to enlarge</u>
+        </font>
+
+   </p></td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   <table border="0" width="100%">
+    <tbody><tr>
+      <td width="50%">
+        <p align="center"><a href="https://web.cs.wpi.edu/~emmanuel/courses/cs563/write_ups/zackw/photon_mapping/images/photonmapping/cornellwindow4e.png"><img border="0" src="./Photon Mapping - Zack Waters_files/cornellwindow4e_small.png" width="300" height="300"></a></p></td>
+      <td width="50%">
+        <p align="center"><a href="https://web.cs.wpi.edu/~emmanuel/courses/cs563/write_ups/zackw/photon_mapping/images/photonmapping/cornellwindow4f.png"><img border="0" src="./Photon Mapping - Zack Waters_files/cornellwindow4f_small.png" width="300" height="300"></a></p></td>
+    </tr>
+    <tr>
+      <td width="50%"></td>
+      <td width="50%"></td>
+    </tr>
+   </tbody></table>
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   Even using the photon map directly images can take a long time to
+   render.&nbsp; Using final gathering in the rendering step can cause the
+   render time to increase dramatically.&nbsp; Ward[6] developed a method called
+   irradiance caching where the illumination is cached and re-used.&nbsp;
+   Illumination values from the cache can be interpolated at a point.&nbsp; The
+   image on the left shows a visualization of the irradiance cache.&nbsp; All
+   points that are black are the points where a cached value was used in the
+   right image.  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   &nbsp;  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   <p align="center"><font face="Helvetica" size="3"><u>click on images to enlarge</u>
+        </font>
+
+   </p></td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   <table border="0" width="100%">
+    <tbody><tr>
+      <td width="50%">
+        <p align="center"><a href="https://web.cs.wpi.edu/~emmanuel/courses/cs563/write_ups/zackw/photon_mapping/images/photonmapping/cornellglassballfg8dv.png"><img border="0" src="./Photon Mapping - Zack Waters_files/cornellglassballfg8dv_small.png" width="300" height="300"></a></p></td>
+      <td width="50%">
+        <p align="center"><a href="https://web.cs.wpi.edu/~emmanuel/courses/cs563/write_ups/zackw/photon_mapping/images/photonmapping/cornelltestballs.png"><img border="0" src="./Photon Mapping - Zack Waters_files/cornelltestballs_small.png" width="300" height="300"></a></p></td>
+    </tr>
+    <tr>
+      <td width="50%"></td>
+      <td width="50%"></td>
+    </tr>
+   </tbody></table>
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="28">
+   <h2>Flexibility</h2>
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="40">
+   <span style="font-size:12.0pt;font-family:&quot;Times New Roman&quot;;
+mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:EN-US;mso-fareast-language:
+EN-US;mso-bidi-language:AR-SA">The rendering equation can be split up into four
+   separate terms describing direct illumination, specular reflection, caustics,
+   and indirect illumination.</span>  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   &nbsp;  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="57">
+   <blockquote>
+    <img border="0" src="./Photon Mapping - Zack Waters_files/eq11.gif" width="387" height="36">
+   </blockquote>
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   &nbsp;  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="192" valign="top">
+   <p class="MsoNormal">Due to the fact that information from the photon map
+   describes the incoming flux and that this information is decoupled from the
+   geometry we have the flexibility to solve different parts of the rendering
+   equation by using multiple photon maps.<span style="mso-spacerun:yes">&nbsp; </span>This
+   is also another reason why photon mapping can easily be incorporated into
+   existing renderers.</p>
+   <p class="MsoNormal">For example, we may have an existing path tracer where
+   we would like to use photon mapping to handle caustics.<span style="mso-spacerun:yes">&nbsp;
+   </span>Path tracing does a great job at computing the direct and indirect
+   lighting while photon mapping handles caustics which removes the high
+   frequency noise typically seen in path traced images.<span style="mso-spacerun:yes">&nbsp;
+   </span>In addition, we can use information from the photon map to help us
+   importance sample the hemisphere.</p><p class="MsoNormal">Another great
+   feature of the photon maps is that it provides information that can be used
+   as heuristics for other parts of the rendering equation.&nbsp; For example,
+   with a little extra work, information from the photon map can provide
+   information as to whether shadow rays are needed at a location.&nbsp; This
+   alone can reduce the rendering times significantly.&nbsp; In path tracers the
+   photon map can also be used for importance sampling.</p></td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="21">
+   &nbsp;  
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="20">
+   <h2>References</h2>
+   </td>
+</tr>
+
+<tr>
+   <td align="left" width="798" height="148">
+   <table border="0" width="100%">
+    <tbody><tr>
+      <td width="5%">[1]</td>
+      <td width="95%">
+
+Jensen, Henrik W., <u>Realistic Image Synthesis Using Photon Mapping</u>, A K
+Peters, Ltd., Massachusetts, 2001</td>
+    </tr>
+    <tr>
+      <td width="5%">[2]</td>
+      <td width="95%">
+        
+
+<font face="Helvetica" size="3">
+
+Shirley,
+Peter <u>Realistic Raytracing</u> A K Peters, Ltd. Massachusetts, 2000.
+        </font></td>
+    </tr>
+    <tr>
+      <td width="5%">[3]</td>
+      <td width="95%">James T. Kajiya.&nbsp; <u>The Rendering
+      Equation</u>.<span style="mso-spacerun:yes">&nbsp; </span>Computer
+      Graphics, 20(4):143-150, August 1986. ACM Siggraph ’86 Conference
+      Proceedings.</td>
+    </tr>
+    <tr>
+      <td width="5%">[4]</td>
+      <td width="95%">
+        <p align="left">Shirley, Peter <u>Fundamentals of Computer Graphics</u>,
+        A K Peters, Ltd, Massachusetts, 2002</p>
+      </td>
+    </tr>
+    <tr>
+      <td width="5%">[5]</td>
+      <td width="95%">Glassner, Andrew <u>Principles of Digital Image Synthesis</u> Morgan Kaufmann Publishers, Inc., San
+        Fransico, 1995</td>
+    </tr>
+    <tr>
+      <td width="5%">[6]</td>
+      <td width="95%">Ward et al, <u>A Ray Tracing Solution for Diffuse
+        Interreflection</u>.Computer Graphics, 22(4): 85-92 August 1988. ACM
+        Siggraph '88 Conference Proceedings.</td>
+    </tr>
+   </tbody></table>
+   </td>
+</tr>
+
+</tbody></table><font face="Helvetica" size="3"><font face="Helvetica" size="3">
+
+
+
+<br><br> <hr><br><br>
+
+
+
+</font></font></font></font></body></html>

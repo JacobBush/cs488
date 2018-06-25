@@ -8,14 +8,19 @@
 \Large
 
 A5 Project Proposal
+\vfill
 
-Title:
+% Title: 
+{\LARGE Photorealistic Glass Rendering through Ray Tracing}
 
-Name: Jacob Bush
+\vfill
+% Name: 
+Jacob Bush
 
-Student ID: 20558637
-
-User ID: jbush
+% Student ID: 
+20558637 $\cdot$
+% User ID: 
+jbush
 \end{center}
 \vfill ~\vfill~
 \newpage
@@ -23,21 +28,23 @@ User ID: jbush
 \begin{description}
 \item[Purpose]:
 
-    To create an image that can simulate glass in a near-photorealistic manner.
+    To use advanced algorithms and techniques to create a near photorealistic image.
 
 \item[Statement]:
 
-	For Ray Tracers: Paragraph describing interesting scene to be
-		rendered and what features are needed to achieve
-		this scene.
+% 	For Ray Tracers: Paragraph describing interesting scene to be
+% 		rendered and what features are needed to achieve
+% 		this scene.
 
-	Paragraph: What it's about.
+% 	Paragraph: What it's about.
 
-	Paragraph: What to do.
+% 	Paragraph: What to do.
 
-	Paragraph: Why it is interesting and challenging.
+% 	Paragraph: Why it is interesting and challenging.
 
-	Paragraph: What I will learn
+% 	Paragraph: What I will learn
+
+    For this project, I will create a scene that achieves photorealistic elements. Primarily, I want to simulate glass; simulating something as simple as a wine glass combines a wide variety of graphical techniques, including reflection, refraction, and caustics, in addition to many that have been covered previously in the course. To supplement this core idea, texture and bump mapping will be used to create a more complicated background than has been used thus far. I will implement antialiasing and a depth of field in order to more closely match an actual photograph. In order to render an image such as this in a reasonable period of time, octrees will be used to accelerate the ray tracing process.
 
 \item[Technical Outline]:
     % Basically, your objectives in your objective list should be fairly
@@ -56,29 +63,30 @@ User ID: jbush
     %  {\small small words}.  
     
     For new primitives, I will implement cylinders and toruses. I will use the equations provided in class, and also by referencing Watt \& Watt \cite{WattQuad} and Wolfram Mathworld \cite{Weisstein}. This will require the creation of two new commands to the input language. The command  \texttt{gr.cylinder} will create a cylinder, and the command \texttt{gr.torus} will create a torus.
-    Non-hierarchal versions of these commands (\texttt{gr.nh\_cylinder}, \texttt{gr.nh\_torus}) may also be added for convenience.
+    Non-hierarchical versions of these commands (\texttt{gr.nh\_cylinder}, \texttt{gr.nh\_torus}) may also be added for convenience.
 
-    For both texture and bump mapping, I will rely heavily on Watt \& Watt \cite{WattMapping}, as well as referencing Blinn \& Newell's 1976 paper \cite{Blinn} and Catmull's original dissertation on the topic \cite{Catmull}. Two new commands will be added to the input language to implement texture mapping. The command \texttt{gr.texturemap} will return a TextureMap object (by, for instance, reading an image file into a matrix of size equal to the image resolution). The object method \texttt{geonode:set\_texturemap} will apply the given texture map to the GeometryNode. We will similarily define two new commands for bump mapping: \texttt{gr.bumpmap} to create a BumpMap object, and \texttt{geonode:set\_bumpmap} to apply the bump map to a the GeometryNode.
+    For both texture and bump mapping, I will rely heavily on Watt \& Watt \cite{WattMapping}, as well as referencing Blinn \& Newell's 1976 paper \cite{Blinn} and Catmull's original dissertation on the topic \cite{Catmull}. Two new commands will be added to the input language to implement texture mapping. The command \texttt{gr.texturemap} will return a TextureMap object (by, for instance, reading an image file into a matrix of size equal to the image resolution). The object method \texttt{geonode:set\_texturemap} will apply the given texture map to the GeometryNode. We will similarily define two new commands for bump mapping: \texttt{gr.bumpmap} to create a BumpMap object, and \texttt{geonode:set\_bumpmap} to apply the bump map to a the GeometryNode. The essence of both texture and bump mapping is to split the geometry into patches, and then to apply a mapping to those patches. In texture mapping, the color of each patch is changed. In bump mapping, the normals of each patch are perturbed. 
     
-    Reflection.
+    Reflection and refraction will be implemented by referencing the equations provided in class, and also by referencing Watt \& Watt, Hall \& Greenberg and Stanford's CS148 lecture slides \cite{WattLight}\cite{Hall}\cite{Fedkiw}. Reflection will be implemented by tracing a new ray with angle of reflection equal to the angle of incidence. Refraction will be implemented by tracing a new ray with angle of refraction determined by Snell's law. 
+    % Since Snell's law requires reflective indices, these will need to be specified for all transmissive materials, and also for empty space (which will be set to the reflective index of air). 
+    Reflection and transmission coefficients, $k_r$ and $k_t$, will need to specified for all materials in the scene.
+    % The number of bounces allowed for a given ray will be bounded by some constant.
     
-    Refraction.
+    Caustics will be implemented via photon mapping. For a point light source, photons are emitted uniformly (an easy calculation for this is given by Weisstein \cite{SpherePicking}) in all directions, with perhaps a modifier based on the relative density of the scene. The photons are traced with a randomized absorption strategy, and the absorption point of each photon is recorded. Jensen recommends using a kd-tree to store the photon map \cite{Jensen}. For every point in the scene, the density of the closest N photons to that point will provide an estimate of the illuminance at that point; call this $L_{caustics}$. Our rendering equation then becomes $L_r = L_{direct} + L_{specular} + L_{caustics}$ \cite{Watters}.
     
-    Caustics.
-    
-    Acceleration will be acieved through the use of octtrees. The space will be divided into octants, (eight regions) with each octant containing $0$ or more objects. Octants with more than a certain threshold of objects in them will be further subdivided. Instead of testing a ray's intersection against all objects in the scene, we test it against only the objects in the regions that the ray will pass through, reducting computational overhead \cite{WattOct}.
+    Acceleration will be achieved through the use of an octree. The space will be divided into octants, (eight regions) with each octant containing $0$ or more objects. Octants with more than N objects in them will be further subdivided. Instead of testing a ray's intersection against all objects in the scene, we test it against only the objects in the regions that the ray will pass through, reducing computational overhead \cite{WattOct}.
 
-    Antialiasing will be achieved via the jittering method described in class. That is: subdivide each pixel in the scene into an $N\times N$ grid, for some fixed $N$. For each region in the subdivided grid, randomly select a point in that region, and trace a ray through that point. The resulting color of the pixel is the average of the colors returned by the $N^2$ rays.
+    Antialiasing will be achieved via supersampling: specifically the jittering method described in class. Each pixel in the scene will be subdivided into an $N\times N$ grid, for some fixed $N$. For each region in the subdivided grid, randomly select a point in that region, and trace a ray through that point. The resulting color of the pixel is the average of the colors returned by the $N^2$ rays.
     
-    Depth of field.
+    The lack of depth of field in rendered images is a result of the camera being a pinhole. An area camera is simulated by randomly selecting N camera locations in a fixed area (jittering), and then averaging the resulting images produced at each camera location. Objects on or close to the focal plane of the camera will appear in approximately the same location in all of the images, and will thus be clear. Objects far away from the focal plane will appear in a different location in all the images, and will thus be blurred \cite{WattDOF}.
     
-    Final Scene.
+    The final scene will not be technically challenging. It will be a culmination of the work done in the rest of the project. Textures will be procured from free online galleries. Polygon meshes will either be found online, or be made by myself in a program like Blender.
 
 \item[Bibliography]:
 
 \begingroup
 \renewcommand{\section}[2]{}%
-\begin{thebibliography}{9}
+\begin{thebibliography}{15}
 
 %https://graphics.stanford.edu/courses/cs348b-05/readings.html
 
@@ -86,13 +94,13 @@ User ID: jbush
 % Wang, Huamin. "Texture Mapping". department of Computer Science and Engineering. Ohio State University. \\\texttt{http://web.cse.ohio-state.edu/\textasciitilde wang.3602/courses/cse5542-2013-spring/15-texture.pdf}
 
 \bibitem{WattQuad} 
-Watt, Alan H.\& Watt, Mark (1992). Instersections: ray/quadratics. In Advanced Animation and Rendering Techniques: Theory and Practice. Addison-Wesley Professional. pp. 226-227.
+Watt, Alan H. \& Watt, Mark (1992). Instersections: ray/quadratics. In Advanced Animation and Rendering Techniques: Theory and Practice. Addison-Wesley Professional. pp. 226-227.
 
 \bibitem{Weisstein} 
-Weisstein, Eric W. "Torus." From MathWorld--A Wolfram Web Resource.\\ \texttt{http://mathworld.wolfram.com/Torus.html}
+Weisstein, Eric W. Torus. From MathWorld--A Wolfram Web Resource.\\ \texttt{http://mathworld.wolfram.com/Torus.html}
 
 \bibitem{WattMapping} 
-Watt, Alan H.\& Watt, Mark (1992). Mapping techniques: texture and environment mapping. In Advanced Animation and Rendering Techniques: Theory and Practice. Addison-Wesley Professional. pp. 178-201.
+Watt, Alan H. \& Watt, Mark (1992). Mapping techniques: texture and environment mapping. In Advanced Animation and Rendering Techniques: Theory and Practice. Addison-Wesley Professional. pp. 178-201.
 
 \bibitem{Blinn}
 Blinn, J. F., \& Newell, M. E. (1976). Texture and reflection in computer generated images. Communications of the ACM, 19(10), 542-547. \texttt{https://doi.org/10.1145/360349.360353}
@@ -100,8 +108,33 @@ Blinn, J. F., \& Newell, M. E. (1976). Texture and reflection in computer genera
 \bibitem{Catmull}
 Catmull, E. (1974). A subdivision algorithm for computer display of curved surfaces (PhD thesis). University of Utah.
 
+\bibitem{WattLight} 
+Watt, Alan H. \& Watt, Mark (1992). The theory and practice of light/object interaction. In Advanced Animation and Rendering Techniques: Theory and Practice. Addison-Wesley Professional. pp. 33-64.
+
+\bibitem{Hall}
+Hall, R., \& Greenberg, D. (1983). A Testbed for Realistic Image Synthesis. IEEE Computer Graphics and Applications, 3(8), 10–20. https://doi.org/10.1109/mcg.1983.263292
+
+\bibitem{Fedkiw}
+Fedkiw, R. (2017). Reflection and Transmission. Retrieved June 24, 2018, from\\
+\texttt{https://web.stanford.edu/class/cs148/pdf/class\_11\_reflection\_and\_transmission.pdf}
+
+\bibitem{Jensen}
+Jensen, Henrik W. (2001). Realistic Image Synthesis Using Photon Mapping. A K Peters, Ltd.
+
+\bibitem{Watters}
+Waters, Z. (n.d.). Photon Mapping. Retrieved June 24, 2018, from\\ \texttt{https://web.cs.wpi.edu/\textasciitilde emmanuel/courses/cs563/\\write\_ups/zackw/photon\_mapping/PhotonMapping.html}
+
+\bibitem{SpherePicking}
+Weisstein, Eric W. Sphere Point Picking. From MathWorld--A Wolfram Web Resource.\\ \texttt{http://mathworld.wolfram.com/SpherePointPicking.html}
+
+% \bibitem{Hugues}
+% Hugues, J. F. et al. (2014). Computer graphics: Principles and practice, 2nd ed. Addison-Wesley.
+
 \bibitem{WattOct} 
 Watt, Alan H.\& Watt, Mark (1992). Spatial coherence. In Advanced Animation and Rendering Techniques: Theory and Practice. Addison-Wesley Professional. pp. 241-248.
+
+\bibitem{WattDOF} 
+Watt, Alan H.\& Watt, Mark (1992). Depth of field. In Advanced Animation and Rendering Techniques: Theory and Practice. Addison-Wesley Professional. pp. 264-265.
 
 % \bebitem{stanfordaccel}
 % https://graphics.stanford.edu/courses/cs348b-05/lectures/lecture3/raytrace_ii.pdf
@@ -129,8 +162,8 @@ Watt, Alan H.\& Watt, Mark (1992). Spatial coherence. In Advanced Animation and 
      \item Bump Mapping
      \item Reflection
      \item Refraction
-     \item Caustics via ...
-     \item Acceleration via Oct-tree
+     \item Caustics via Photon Mapping
+     \item Acceleration via Octree
      \item Antialiasing
      \item Depth of Field
      \item Final Scene
@@ -139,5 +172,5 @@ Watt, Alan H.\& Watt, Mark (1992). Spatial coherence. In Advanced Animation and 
 % Soft Shadows? Constructive solid geometry? glossy reflection / transmission? Radiosity (might be hard)? Path tracing? Depth of field?
 
 % Delete % at start of next line if this is a ray tracing project
-A4 extra objective: I did antialiasing as my extra objective for A4. \textbf{However}, I do not expect to receive the mark for it. If I \textit{do} recieve credit for this objective in A4, I will choose a new objective for the projcet.
+A4 extra objective: I did antialiasing as my extra objective for A4. I did not receive full credit for this objective since I did not end up demonstrating it in an image. Talking with Gladimir in class, he said that if I did not receive credit for this objective, then I could use it as an objective for the project. Since I did not receive full marks for this objective, I assume that I am allowed to implement antialiasing as one of my project objectives. If this is not the case, I will change the objective for another one.
 \end{document}
