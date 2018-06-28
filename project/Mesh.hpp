@@ -7,30 +7,18 @@
 #include <glm/glm.hpp>
 
 #include "Primitive.hpp"
-
-struct Triangle
-{
-	size_t v1;
-	size_t v2;
-	size_t v3;
-
-	Triangle( size_t pv1, size_t pv2, size_t pv3 )
-		: v1( pv1 )
-		, v2( pv2 )
-		, v3( pv3 )
-	{}
-};
+#include "Triangle.hpp"
 
 // A polygonal mesh.
 class Mesh : public Primitive {
 public:
   ~Mesh();
   Mesh( const std::string& fname );
-  Intersection intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_intersection) override;
+  Intersection *intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_intersection) override;
   glm::vec3 get_normal_at_point(glm::vec3 p, Intersection *intersection) override;
 
 protected:
-	const double BB_EPSILON = CUBE_BB_EPSILON * 250.0;
+	const double BB_EPSILON = CUBE_BB_EPSILON * 256.0;
 	const bool SPECIAL_BOUNDING_BOX_RENDERING = false;
   
 private:

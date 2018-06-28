@@ -36,13 +36,13 @@ double Primitive::plane_intersection(glm::vec3 p0, glm::vec3 N, glm::vec3 a, glm
 	}
 }
 
-Intersection Primitive::intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_intersection) {
+Intersection *Primitive::intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_intersection) {
 	// where (b-a) defines a ray.
 	// -1 -> no intersection
-	return Intersection();
+	return new Intersection();
 }
 
-Intersection Sphere::intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_intersection) {
+Intersection *Sphere::intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_intersection) {
 	// where (b-a) defines a ray.
 	// -1 -> no intersection
 
@@ -55,29 +55,30 @@ Intersection Sphere::intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_
 
 	double discriminant = B*B - 4.0*A*C;
 
-	Intersection i;
+	Intersection * i;
 
 	if (discriminant < -SPHERE_EPSILON) {
 		// negative - no roots
-		i = Intersection();
+		i = new Intersection();
 	} else if (glm::abs(discriminant) <= SPHERE_EPSILON) {
 		// approximately 0 - 1 root
-		i = Intersection(-2.0*C/B);
+		i = new Intersection(-2.0*C/B);
 	} else {
 		// 2 roots
 		double sqrt_disc = glm::sqrt(discriminant);
 		double t1 = -2.0*C/(B + sqrt_disc);
 		double t2 = -2.0*C/(B - sqrt_disc);
 
-		i = Intersection(glm::min(t1,t2));
+		i = new Intersection(glm::min(t1,t2));
 	}
-	if (!i.has_intersected || i.t < SPHERE_EPSILON) {
-		i = Intersection();
+	if (!i->has_intersected || i->t < SPHERE_EPSILON) {
+		delete i;
+		i = new Intersection();
 	}
 	return i;
 }
 
-Intersection Cube::intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_intersection) {
+Intersection *Cube::intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_intersection) {
 	// where (b-a) defines a ray.
 	double E = is_bounding_box ? CUBE_BB_EPSILON : CUBE_EPSILON;
 	double t = nan("");
@@ -88,12 +89,12 @@ Intersection Cube::intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_in
 		}
 	}
 	if (isnan(t) || t < E) {
-		return Intersection();
+		return new Intersection();
 	}
-	return Intersection(t);
+	return new Intersection(t);
 }
 
-Intersection NonhierSphere::intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_intersection) {
+Intersection *NonhierSphere::intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_intersection) {
 	// where (b-a) defines a ray.
 	// -1 -> no intersection
 	//std::cout << "in NonhierSphere::intersection" << std::endl;
@@ -104,24 +105,25 @@ Intersection NonhierSphere::intersection(glm::vec3 a, glm::vec3 b, Intersection 
 
 	double discriminant = B*B - 4.0*A*C;
 
-	Intersection i;
+	Intersection *i;
 
 	if (discriminant < -SPHERE_EPSILON) {
 		// negative - no roots
-		i = Intersection();
+		i = new Intersection();
 	} else if (glm::abs(discriminant) <= SPHERE_EPSILON) {
 		// approximately 0 - 1 root
-		i = Intersection(-2.0*C/B);
+		i = new Intersection(-2.0*C/B);
 	} else {
 		// 2 roots
 		double sqrt_disc = glm::sqrt(discriminant);
 		double t1 = -2.0*C/(B + sqrt_disc);
 		double t2 = -2.0*C/(B - sqrt_disc);
 
-		i = Intersection(glm::min(t1,t2));
+		i = new Intersection(glm::min(t1,t2));
 	}
-	if (!i.has_intersected || i.t < SPHERE_EPSILON) {
-		i = Intersection();
+	if (!i->has_intersected || i->t < SPHERE_EPSILON) {
+		delete i;
+		i = new Intersection();
 	}
 	return i;
 }
@@ -187,7 +189,7 @@ double NonhierBox::intersect_side(uint side, bool front, glm::vec3 a, glm::vec3 
 }
 
 
-Intersection NonhierBox::intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_intersection) {
+Intersection *NonhierBox::intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_intersection) {
 	// where (b-a) defines a ray.
 	double t = nan("");
 	for (uint i = 0; i < 3; i++) {
@@ -197,9 +199,9 @@ Intersection NonhierBox::intersection(glm::vec3 a, glm::vec3 b, Intersection * p
 		}
 	}
 	if (isnan(t) || t < CUBE_EPSILON) {
-		return Intersection();
+		return new Intersection();
 	}
-	return Intersection(t);
+	return new Intersection(t);
 }
 
 glm::vec3 Primitive::get_normal_at_point(glm::vec3 p, Intersection *intersection) {

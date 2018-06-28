@@ -37,7 +37,7 @@ scene_root:add_child(cloud1)
 
 
 gr.render(scene_root,
-	  'sample-aa.png', 150, 150,
+	  'sample.png', 256, 256,
 	  {0, 2, 30}, {0, 0, -1}, {0, 1, 0}, 50,
 	  {0.4, 0.4, 0.4}, {
 	  gr.light({200, 200, 0}, {0.1, 0.1, 0.8}, {1, 0, 0}),

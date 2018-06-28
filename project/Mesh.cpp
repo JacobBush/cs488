@@ -146,7 +146,7 @@ double Mesh::triangle_intersection(const Triangle & tri, glm::vec3 a, glm::vec3 
 	}
 }
 
-Intersection Mesh::intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_intersection) {
+Intersection *Mesh::intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_intersection) {
 	// where (b-a) defines a ray.
 	
 	glm::vec3 aprime = glm::vec3(*T_inv * glm::vec4(a, 1));
@@ -156,22 +156,22 @@ Intersection Mesh::intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_in
 		return Cube(true).intersection(aprime, bprime, prev_intersection);
 	}
 
-	if (!Cube(true).intersection(aprime, bprime, prev_intersection).has_intersected) {
+	if (!Cube(true).intersection(aprime, bprime, prev_intersection)->has_intersected) {
 		// We don't hit bounding box
-		return Intersection();
+		return new Intersection();
 	}
 
-	Intersection i = Intersection();
+	Intersection *i = new Intersection();
 	for (Triangle tri : m_faces) {
 		double tprime = triangle_intersection(tri, a, b);
-		if (!i.has_intersected || (!isnan(tprime) && tprime < i.t)) {
+		if (!i->has_intersected || (!isnan(tprime) && tprime < i->t)) {
 			if (prev_intersection && prev_intersection->tri == &tri) {
 				// triangles shouldn't have self intersection
 				continue;
 			}
-			i = Intersection(tprime);
-			if (i.tri != NULL) delete i.tri;
-			i.tri = new Triangle(tri.v1, tri.v2, tri.v3);
+			delete i;
+			i = new Intersection(tprime);
+			i->tri = new Triangle(tri.v1, tri.v2, tri.v3);
 		}
 	}
 	return i;
