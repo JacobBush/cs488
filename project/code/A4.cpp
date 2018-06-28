@@ -6,8 +6,8 @@
 #include "GeometryNode.hpp"
 #include "PhongMaterial.hpp"
 
-const uint MAX_HITS = 2;
-const uint NUM_SAMPLES = 1;
+const uint MAX_HITS = 1;
+const uint NUM_SAMPLES = 4;
 const uint NUM_SAMPLES_EACH_DIR = (uint)glm::sqrt(NUM_SAMPLES);
 
 const double EPSILON = 0.001;
