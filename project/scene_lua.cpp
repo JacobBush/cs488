@@ -158,6 +158,27 @@ int gr_joint_cmd(lua_State* L)
   return 1;
 }
 
+// Create a torus node
+extern "C"
+int gr_torus_cmd(lua_State* L)
+{
+  GRLUA_DEBUG_CALL;
+  
+  gr_node_ud* data = (gr_node_ud*)lua_newuserdata(L, sizeof(gr_node_ud));
+  data->node = 0;
+
+  const char* name = luaL_checkstring(L, 1);
+
+  double rad = luaL_checknumber(L, 2);
+
+  data->node = new GeometryNode(name, new Torus(rad));
+
+  luaL_getmetatable(L, "gr.node");
+  lua_setmetatable(L, -2);
+
+  return 1;
+}
+
 // Create a sphere node
 extern "C"
 int gr_sphere_cmd(lua_State* L)
@@ -525,6 +546,9 @@ static const luaL_Reg grlib_functions[] = {
   {"mesh", gr_mesh_cmd},
   {"light", gr_light_cmd},
   {"render", gr_render_cmd},
+  // New for project
+  {"torus", gr_torus_cmd},
+  //
   {0, 0}
 };
 

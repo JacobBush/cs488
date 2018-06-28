@@ -81,9 +81,23 @@ private:
 };
 
 class Torus : public Primitive {
+public:
+  Torus(double tube_rad): A(1.0), B(tube_rad) {}
+  Torus(): Torus(0.25) {}
+  virtual ~Torus();
 
-}
+  Intersection *intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_intersection) override;
+  glm::vec3 get_normal_at_point(glm::vec3 p, Intersection *intersection) override;
+private:
+  double A; // Distance from origin to center of tube
+  double B; // radius of tube
+};
 
 class Cylinder : public Primitive {
-  
-}
+public:
+  Cylinder() {}
+  virtual ~Cylinder();
+
+  Intersection *intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_intersection) override;
+  glm::vec3 get_normal_at_point(glm::vec3 p, Intersection *intersection) override;
+};

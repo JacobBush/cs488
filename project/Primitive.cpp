@@ -3,6 +3,8 @@
 #include <math.h>
 #include <glm/ext.hpp>
 
+#include "polyroots.hpp"
+
 Primitive::~Primitive()
 {
 }
@@ -20,6 +22,14 @@ NonhierSphere::~NonhierSphere()
 }
 
 NonhierBox::~NonhierBox()
+{
+}
+
+Torus::~Torus()
+{
+}
+
+Cylinder::~Cylinder()
 {
 }
 
@@ -213,15 +223,16 @@ glm::vec3 Sphere::get_normal_at_point(glm::vec3 p, Intersection *intersection) {
 }
 
 glm::vec3 Cube::get_normal_at_point(glm::vec3 p, Intersection *intersection) {
-	for (uint i = 0; i < 3; i++) {
-		for (uint j = 0; j <= 1; j++) {
-			if (point_on_side(p, i, j)) {
-				glm::vec3 N = glm::vec3(0.0,0.0,0.0);
-				N[i] = j ? 1.0 : -1.0;
-				return N;
-			}
-		}
-	}
+	// We're going to assume that the point is on the cube
+	p = glm::vec3(glm::abs(p.x), glm::abs(p.y), glm::abs(p.z));
+	if (p.x < CUBE_EPSILON) return glm::vec3(-1.0, 0.0, 0.0);
+	if (p.x > 1 - CUBE_EPSILON) return glm::vec3(1.0, 0.0, 0.0);
+	if (p.y < CUBE_EPSILON) return glm::vec3(0.0, -1.0, 0.0);
+	if (p.y > 1 - CUBE_EPSILON) return glm::vec3(0.0, 1.0, 0.0);
+	if (p.y < CUBE_EPSILON) return glm::vec3(0.0, 0.0, -1.0);
+	if (p.y > 1 - CUBE_EPSILON) return glm::vec3(0.0, 0.0, 1.0);
+	// The point is inside the cube
+	return glm::vec3();
 }
 
 glm::vec3 NonhierSphere::get_normal_at_point(glm::vec3 p, Intersection *intersection) {
@@ -238,4 +249,61 @@ glm::vec3 NonhierBox::get_normal_at_point(glm::vec3 p, Intersection *intersectio
 			}
 		}
 	}
+}
+
+//
+// Torus
+//
+
+double sq(double x) {return x*x;}
+
+Intersection *Torus::intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_intersection) {
+	// by: cosinekitty.com/raytrace/chapter13_torus.html
+
+	const glm::vec3 D = a;
+	const glm::vec3 E = b-a;
+
+	const double G = 4*sq(A)*(sq(E.x) + sq(E.y));
+	const double H = 8*sq(A)*(D.x*E.x + D.y*E.y);
+	const double I = 4*sq(A)*(sq(D.x) + sq(D.y));
+	const double J = sq(glm::length(E));
+	const double K = 2*glm::dot(D, E);
+	const double L = sq(glm::length(D)) + sq(A) - sq(B);
+
+	double roots[4] = {0};
+
+	const size_t nroots = quarticRoots(2*K/J, (2*J*L + sq(K) - G)/sq(J), (2*K*L - H)/sq(J), (sq(L) - I)/sq(J), roots);
+
+	// There are more elegant ways to do this, but this is functional
+	if (nroots) {
+		// we have roots
+		double root = roots[0];
+		for (int i = 1; i < nroots; i++) {
+			root = glm::min(root, roots[i]);
+		}
+		return new Intersection(root);
+	} else {
+		return new Intersection();
+	}
+}
+
+
+glm::vec3 Torus::get_normal_at_point(glm::vec3 p, Intersection *intersection) {
+	// by: cosinekitty.com/raytrace/chapter13_torus.html
+	// Assuming the point is on the surface
+	double alpha = 1 - A/glm::sqrt(sq(p.x) + sq(p.y));
+	return glm::normalize(glm::vec3(alpha*p.x, alpha*p.y, p.z));
+}
+
+//
+// Cylinder
+//
+
+Intersection *Cylinder::intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_intersection) {
+	return new Intersection();
+}
+
+
+glm::vec3 Cylinder::get_normal_at_point(glm::vec3 p, Intersection *intersection) {
+	return glm::vec3();
 }

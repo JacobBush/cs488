@@ -156,6 +156,7 @@ Intersection *Mesh::intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_i
 		return Cube(true).intersection(aprime, bprime, prev_intersection);
 	}
 
+	// only bounding box if more polygons than the box if it were made of triangles
 	if (!Cube(true).intersection(aprime, bprime, prev_intersection)->has_intersected) {
 		// We don't hit bounding box
 		return new Intersection();
