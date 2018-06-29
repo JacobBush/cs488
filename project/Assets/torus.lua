@@ -3,7 +3,8 @@
 --
 
 ground = gr.material({0.1, 0.7, 0.1}, {0.0, 0.0, 0.0}, 0)
-item = gr.material({0.2, 0.5, 0.7}, {0.3, 0.3, 0.3}, 20)
+item1 = gr.material({0.2, 0.5, 0.7}, {0.3, 0.3, 0.3}, 20)
+item2 = gr.material({0.7, 0.5, 0.2}, {0.3, 0.3, 0.3}, 20)
 
 
 -- ##############################################
@@ -22,12 +23,18 @@ plane:scale(30, 30, 30)
 
 -- the object
 
-torus = gr.torus('torus', 0.25);
-scene:add_child(torus)
-torus:set_material(item)
-torus:scale(5.0, 5.0, 5.0)
-torus:translate(0.0, 6.25, 5.0)
+t1 = gr.torus('t1', 0.25);
+scene:add_child(t1)
+t1:set_material(item1)
+t1:scale(5.0, 5.0, 5.0)
+t1:translate(-2.0, 6.25, 5.0)
 
+t2 = gr.torus('t2', 0.25);
+scene:add_child(t2)
+t2:set_material(item2)
+t2:rotate('X', 90)
+t2:scale(5.0, 5.0, 5.0)
+t2:translate(3.0, 6.25, 5.0)
 
 gr.render(scene,
 	  'torus.png', 512, 512,
