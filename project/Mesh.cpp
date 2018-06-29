@@ -139,7 +139,8 @@ double Mesh::triangle_intersection(const Triangle & tri, glm::vec3 a, glm::vec3 
 	double gamma = D1 / D;
 	double t = D2 / D;
 
-	if (beta >= -MESH_EPSILON && gamma >= -MESH_EPSILON && beta + gamma - 1.0 <= MESH_EPSILON) {
+	if (beta >= -MESH_EPSILON && gamma >= -MESH_EPSILON && beta + gamma - 1.0 <= MESH_EPSILON
+		&& t >= MESH_EPSILON) { // t is some non-zero distance along ray to b
 		return t;
 	} else {
 		return nan("");
@@ -156,10 +157,10 @@ Intersection *Mesh::intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_i
 		return Cube(true).intersection(aprime, bprime, prev_intersection);
 	}
 
-	// only bounding box if more polygons than the box if it were made of triangles
-	if (!Cube(true).intersection(aprime, bprime, prev_intersection)->has_intersected) {
-		// We don't hit bounding box
-		return new Intersection();
+	// only bounding box if more polygons than the box (if it were made of triangles)
+	if (m_faces.size() > 12 && 
+		!Cube(true).intersection(aprime, bprime, prev_intersection)->has_intersected) {
+		return new Intersection(); // We don't hit bounding box
 	}
 
 	Intersection *i = new Intersection();

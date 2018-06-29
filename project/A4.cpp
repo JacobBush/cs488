@@ -96,20 +96,24 @@ Intersection *recursive_intersect(glm::vec3 a, glm::vec3 b, SceneNode *node, glm
 	return i;
 }
 
-glm::vec3 direct_light(const glm::vec3 &p, const glm::vec3 &N, Light *light, SceneNode *node, Intersection * prev_intersection) {
-	glm::vec3 surface_to_light = light->position - p;
-
-	if (glm::dot(surface_to_light, N) <= EPSILON) { // not on same side as light
-		return glm::vec3(0.0,0.0,0.0);
+bool cast_shadow_ray(glm::vec3 hit, glm::vec3 norm, glm::vec3 light_pos, SceneNode *node, Intersection * prev_intersection) {
+	// true if shadow cast
+	if (glm::dot(light_pos-hit, norm) <= EPSILON) { // not on same side as light
+		return true;
 	}
-	
-	Intersection *intersection = recursive_intersect(p, light->position, node, glm::mat4(), prev_intersection);
+	Intersection *intersection = recursive_intersect(hit, light_pos, node, glm::mat4(), prev_intersection);
 	if (intersection->has_intersected && intersection->t > 0.0 && intersection->t < 1.0) { // there's a shadow cast
 		delete intersection;
-		return glm::vec3(0.0,0.0,0.0);
+		return true;
 	}
 	delete intersection;
+	return false;
+}
 
+glm::vec3 direct_light(const glm::vec3 &p, const glm::vec3 &N, Light *light, SceneNode *node, Intersection * prev_intersection) {
+	if (cast_shadow_ray(p, N, light->position, node, prev_intersection)) return glm::vec3(0.0,0.0,0.0);
+
+	glm::vec3 surface_to_light = light->position - p;
 	double dist = glm::length(surface_to_light);
 
 	return light->colour * (glm::dot(glm::normalize(surface_to_light), N)) / 
@@ -123,12 +127,8 @@ glm::vec3 get_reflected_color(glm::vec3 a, glm::vec3 p, glm::vec3 N,
 							  Intersection * prev_intersection) {
   	glm::vec3 colour = glm::vec3(0.0,0.0,0.0);
   	for (Light * light : lights) {
-  		Intersection *intersection = recursive_intersect(p, light->position, node, glm::mat4(), prev_intersection);
-		if (intersection->has_intersected && intersection->t > 0.0 && intersection->t < 1.0) { // there's a shadow cast
-			delete intersection;
-			continue;
-		}
-		delete intersection;
+  		if (cast_shadow_ray(p, N, light->position, node, prev_intersection)) continue;
+
   		glm::vec3 l = light->position - p;
   		glm::vec3 r = -l + 2.0*(glm::dot(l,N))*N;
 

@@ -27,14 +27,21 @@ t1 = gr.torus('t1', 0.25);
 scene:add_child(t1)
 t1:set_material(item1)
 t1:scale(5.0, 5.0, 5.0)
-t1:translate(-2.0, 6.25, 5.0)
+t1:translate(0.0, 1.5, 0.0)
 
 t2 = gr.torus('t2', 0.25);
-scene:add_child(t2)
+--scene:add_child(t2)
 t2:set_material(item2)
 t2:rotate('X', 90)
 t2:scale(5.0, 5.0, 5.0)
 t2:translate(3.0, 6.25, 5.0)
+
+s = gr.sphere('s')
+scene:add_child(s)
+s:set_material(item2)
+s:scale(3.0,3.0,3.0)
+s:translate(3.0, 6.25, 8.0) 
+
 
 gr.render(scene,
 	  'torus.png', 512, 512,
