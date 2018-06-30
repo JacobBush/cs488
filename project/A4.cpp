@@ -1,14 +1,16 @@
 #include <glm/ext.hpp>
 #include <functional>
 #include <math.h>
+#include <cstdlib>
 
 #include "A4.hpp"
 #include "GeometryNode.hpp"
 #include "PhongMaterial.hpp"
 
 const uint MAX_HITS = 1;
-const uint NUM_SAMPLES = 1;
+const uint NUM_SAMPLES = 16;
 const uint NUM_SAMPLES_EACH_DIR = (uint)glm::sqrt(NUM_SAMPLES);
+const bool JITTERING = false;
 
 const double EPSILON = 1.0/1024.0;
 const glm::vec3 ZERO_VECTOR3 = glm::vec3(0.0,0.0,0.0);
@@ -229,11 +231,22 @@ void ray_trace(uint x, uint y, uint w, uint h,
 	glm::vec3 color = glm::vec3(0.0);
 	for (int l = 0; l < NUM_SAMPLES_EACH_DIR; l++) {
 		for (int k = 0; k < NUM_SAMPLES_EACH_DIR; k++) {
-			glm::vec3 pixel = glm::vec3(S2W_transform * glm::vec4(
+			glm::vec3 pixel;
+			if (JITTERING) {
+				double z1 = (double)rand()/(RAND_MAX);
+				double z2 = (double)rand()/(RAND_MAX);
+				pixel = glm::vec3(S2W_transform * glm::vec4(
+					(double)x + (k + z1)/((double)NUM_SAMPLES_EACH_DIR),
+					(double)y + (l + z2)/((double)NUM_SAMPLES_EACH_DIR),
+					0.0, 1.0
+				));
+			} else {
+				pixel = glm::vec3(S2W_transform * glm::vec4(
 					(double)x + (2.0 * (double)k + 1)/(2.0*(double)NUM_SAMPLES_EACH_DIR),
 					(double)y + (2.0 * (double)l + 1)/(2.0*(double)NUM_SAMPLES_EACH_DIR),
 					0.0, 1.0
 				));
+			}
 			Intersection *intersection = recursive_intersect(eye, pixel, node, glm::mat4(), NULL);
 			if (!intersection->has_intersected) {
 				color += get_background_pixel(x,y,w,h);

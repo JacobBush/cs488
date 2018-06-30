@@ -5,6 +5,44 @@
 
 #include "polyroots.hpp"
 
+double sq(double x) {return x*x;}
+
+glm::vec3 Primitive::ray_point_at_parameter(const glm::vec3 &a, const glm::vec3 &b, double t) {
+	return a + t*(b-a);
+}
+
+Intersection *solve_quadratic_intersect(double A, double B, double C, double E) {
+	// Solves Ax^2 + Bx + B = 0 with E as epsilon
+	double discriminant = sq(B) - 4.0*A*C;
+	if (discriminant < -E) {
+		// negative - no roots
+		return new Intersection();
+	} else if (glm::abs(discriminant) <= E) {
+		// approximately 0 - 1 root
+		double t = -2.0*C/B;
+		if (t >= E) return new Intersection(t);
+		else return new Intersection();
+	} else {
+		// 2 roots
+		double sqrt_disc = glm::sqrt(discriminant);
+		double t1 = -2.0*C/(B + sqrt_disc);
+		double t2 = -2.0*C/(B - sqrt_disc);
+		if (t1 < E && t2 < E) return new Intersection();
+		else if (t1 < E) return new Intersection(t2);
+		else if (t2 < E) return new Intersection(t1);
+		else return new Intersection(glm::min(t1,t2));
+	}
+}
+
+double Primitive::plane_intersection(glm::vec3 p0, glm::vec3 N, glm::vec3 a, glm::vec3 b) {
+	double den = glm::dot(N, (b-a));
+	if (glm::abs(den) >= PLANE_EPSILON) {
+		return glm::dot(N, (p0-a)) / den;
+	} else {
+		return nan("");
+	}
+}
+
 Primitive::~Primitive()
 {
 }
@@ -33,19 +71,6 @@ Cylinder::~Cylinder()
 {
 }
 
-glm::vec3 Primitive::ray_point_at_parameter(const glm::vec3 &a, const glm::vec3 &b, double t) {
-	return a + t*(b-a);
-}
-
-double Primitive::plane_intersection(glm::vec3 p0, glm::vec3 N, glm::vec3 a, glm::vec3 b) {
-	double den = glm::dot(N, (b-a));
-	if (glm::abs(den) >= PLANE_EPSILON) {
-		return glm::dot(N, (p0-a)) / den;
-	} else {
-		return nan("");
-	}
-}
-
 Intersection *Primitive::intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_intersection) {
 	// where (b-a) defines a ray.
 	// -1 -> no intersection
@@ -58,34 +83,10 @@ Intersection *Sphere::intersection(glm::vec3 a, glm::vec3 b, Intersection * prev
 
 	// m_pos = [0,0,0]
 	// m_radius = 1
-
 	double A = glm::dot(b-a, b-a);
 	double B = 2.0 * glm::dot(b-a, a);
 	double C = glm::dot(a, a) - 1;
-
-	double discriminant = B*B - 4.0*A*C;
-
-	Intersection * i;
-
-	if (discriminant < -SPHERE_EPSILON) {
-		// negative - no roots
-		i = new Intersection();
-	} else if (glm::abs(discriminant) <= SPHERE_EPSILON) {
-		// approximately 0 - 1 root
-		i = new Intersection(-2.0*C/B);
-	} else {
-		// 2 roots
-		double sqrt_disc = glm::sqrt(discriminant);
-		double t1 = -2.0*C/(B + sqrt_disc);
-		double t2 = -2.0*C/(B - sqrt_disc);
-
-		i = new Intersection(glm::min(t1,t2));
-	}
-	if (!i->has_intersected || i->t < SPHERE_EPSILON) {
-		delete i;
-		i = new Intersection();
-	}
-	return i;
+	return solve_quadratic_intersect(A,B,C,SPHERE_EPSILON);
 }
 
 Intersection *Cube::intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_intersection) {
@@ -112,30 +113,7 @@ Intersection *NonhierSphere::intersection(glm::vec3 a, glm::vec3 b, Intersection
 	double A = glm::dot(b-a, b-a);
 	double B = 2.0 * glm::dot(b-a, a-m_pos);
 	double C = glm::dot(a-m_pos, a-m_pos) - m_radius*m_radius;
-
-	double discriminant = B*B - 4.0*A*C;
-
-	Intersection *i;
-
-	if (discriminant < -SPHERE_EPSILON) {
-		// negative - no roots
-		i = new Intersection();
-	} else if (glm::abs(discriminant) <= SPHERE_EPSILON) {
-		// approximately 0 - 1 root
-		i = new Intersection(-2.0*C/B);
-	} else {
-		// 2 roots
-		double sqrt_disc = glm::sqrt(discriminant);
-		double t1 = -2.0*C/(B + sqrt_disc);
-		double t2 = -2.0*C/(B - sqrt_disc);
-
-		i = new Intersection(glm::min(t1,t2));
-	}
-	if (!i->has_intersected || i->t < SPHERE_EPSILON) {
-		delete i;
-		i = new Intersection();
-	}
-	return i;
+	return solve_quadratic_intersect(A,B,C,SPHERE_EPSILON);
 }
 
 bool Cube::point_on_side(glm::vec3 p, uint side, bool front) {
@@ -255,20 +233,18 @@ glm::vec3 NonhierBox::get_normal_at_point(glm::vec3 p, Intersection *intersectio
 // Torus
 //
 
-double sq(double x) {return x*x;}
-
 Intersection *Torus::intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_intersection) {
 	// by: cosinekitty.com/raytrace/chapter13_torus.html
 
 	const glm::vec3 D = a;
 	const glm::vec3 E = b-a;
 
-	const double G = 4*sq(A)*(sq(E.x) + sq(E.z));
-	const double H = 8*sq(A)*(D.x*E.x + D.z*E.z);
-	const double I = 4*sq(A)*(sq(D.x) + sq(D.z));
+	const double G = 4*(sq(E.x) + sq(E.z));
+	const double H = 8*(D.x*E.x + D.z*E.z);
+	const double I = 4*(sq(D.x) + sq(D.z));
 	const double J = sq(E.x) + sq(E.y) + sq(E.z);
 	const double K = 2*glm::dot(D, E);
-	const double L = sq(D.x) + sq(D.y) + sq(D.z) + sq(A) - sq(B);
+	const double L = sq(D.x) + sq(D.y) + sq(D.z) + 1.0 - sq(r);
 
 	double roots[4] = {0};
 
@@ -293,7 +269,7 @@ Intersection *Torus::intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_
 glm::vec3 Torus::get_normal_at_point(glm::vec3 p, Intersection *intersection) {
 	// by: cosinekitty.com/raytrace/chapter13_torus.html
 	// Assuming the point is on the surface
-	double alpha = 1 - A/glm::sqrt(sq(p.x) + sq(p.z));
+	double alpha = 1 - 1.0/glm::sqrt(sq(p.x) + sq(p.z));
 	return glm::normalize(glm::vec3(alpha*p.x, p.y, alpha*p.z));
 }
 
@@ -302,10 +278,31 @@ glm::vec3 Torus::get_normal_at_point(glm::vec3 p, Intersection *intersection) {
 //
 
 Intersection *Cylinder::intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_intersection) {
-	return new Intersection();
+	// From https://www.cl.cam.ac.uk/teaching/1999/AGraphHCI/SMAG/node2.html
+	glm::vec3 D = b-a;
+	double A = sq(D.x) + sq(D.z);
+	double B = 2*(a.x*D.x + a.z*D.z);
+	double C = sq(a.x) + sq(a.z) - 1;
+	Intersection *i = solve_quadratic_intersect(A,B,C,CYLINDER_EPSILON);
+	glm::vec3 p = ray_point_at_parameter(a,b,i->t);
+	if (p.y <= 0.5 && p.y >= -0.5) { // cylinder of height 1
+		return i;
+	}
+	delete i;
+	// check intersect with top plane or bottom plane
+	double sign = p.y > 0.5 ? 1.0 : -1.0;
+	double t = plane_intersection(glm::vec3(0.0,sign * 0.5,0.0), glm::vec3(0.0,sign,0.0), a, b);
+	if (t <= SPHERE_EPSILON) return new Intersection();
+	p = ray_point_at_parameter(a,b,t);
+	if (sq(p.x) + sq(p.z) <= 1.0) return new Intersection(t);
+	else return new Intersection();
 }
 
 
 glm::vec3 Cylinder::get_normal_at_point(glm::vec3 p, Intersection *intersection) {
-	return glm::vec3();
+	// Assuming that the point is on the surface
+	if (p.y <= 0.5 - SPHERE_EPSILON && p.y >= -0.5 + SPHERE_EPSILON)
+		return glm::vec3(p.x, 0.0, p.z);
+	else if (p.y > 0.5 - SPHERE_EPSILON) return glm::vec3(0.0,1.0,0.0);
+	else return glm::vec3(0.0,-1.0,0.0);
 }

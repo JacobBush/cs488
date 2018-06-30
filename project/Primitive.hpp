@@ -13,11 +13,12 @@ protected:
   // 10^-10
   const double EPSILON = 1.0/1024.0;
   const double SPHERE_EPSILON = EPSILON / 64.0;
-  const double TORUS_EPSILON = EPSILON / 64.0;
   const double CUBE_BB_EPSILON = 0.0;
   const double CUBE_EPSILON = EPSILON / 64.0;
   const double PLANE_EPSILON = EPSILON / 64.0;
   const double MESH_EPSILON = EPSILON / 64.0;
+  const double TORUS_EPSILON = EPSILON / 64.0;
+  const double CYLINDER_EPSILON = EPSILON / 64.0;
 
 
   double plane_intersection(glm::vec3 p0, glm::vec3 N, glm::vec3 a, glm::vec3 b);
@@ -83,19 +84,20 @@ private:
 
 class Torus : public Primitive {
 public:
-  Torus(double tube_rad): A(1.0), B(tube_rad) {}
+  // radius from center to center of tube = 1
+  Torus(double tube_rad): r(tube_rad) {}
   Torus(): Torus(0.25) {}
   virtual ~Torus();
 
   Intersection *intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_intersection) override;
   glm::vec3 get_normal_at_point(glm::vec3 p, Intersection *intersection) override;
 private:
-  double A; // Distance from origin to center of tube
-  double B; // radius of tube
+  double r; // radius of tube
 };
 
 class Cylinder : public Primitive {
 public:
+  // cylinder has height 1, radius 1
   Cylinder() {}
   virtual ~Cylinder();
 

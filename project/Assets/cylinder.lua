@@ -23,22 +23,23 @@ plane:scale(30, 30, 30)
 
 -- the object
 
-t1 = gr.torus('t1', 0.25);
-scene:add_child(t1)
-t1:set_material(item1)
-t1:scale(5.0, 5.0, 5.0)
-t1:translate(2.5, 6.25, 8.0)
+c1 = gr.cylinder('c1', 0.25);
+scene:add_child(c1)
+c1:set_material(item1)
+c1:scale(5.0, 5.0, 5.0)
+c1:translate(2.5, 5.0, 8.0)
 
-t2 = gr.torus('t2', 0.25);
-scene:add_child(t2)
-t2:set_material(item2)
-t2:rotate('X', 90)
-t2:scale(5.0, 5.0, 5.0)
-t2:translate(-2.5, 6.25, 8.0)
-
-
+c2 = gr.cylinder('c2', 0.25);
+scene:add_child(c2)
+c2:set_material(item2)
+c2:scale(1.0, 23.0, 1.0)
+c2:translate(0.0,-9.0,0.0)
+c2:rotate('X', 90)
+c2:rotate('Y', 45)
+c2:rotate('Z', 30)
+c2:translate(-2.0, 8.8, 7.0)
 
 gr.render(scene,
-	  'torus.png', 1024, 1024,
+	  'cylinder-jitter.png', 1024, 1024,
 	  {0, 2, 30}, {0, 0, -1}, {0, 1, 0}, 50,
 	  {0.4, 0.4, 0.4}, {gr.light({200, 202, 430}, {0.8, 0.8, 0.8}, {1, 0, 0})})
