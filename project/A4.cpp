@@ -7,8 +7,8 @@
 #include "GeometryNode.hpp"
 #include "PhongMaterial.hpp"
 
-const uint MAX_HITS = 1;
-const uint NUM_SAMPLES = 16;
+const uint MAX_BOUNCES = 1;
+const uint NUM_SAMPLES = 1;
 const uint NUM_SAMPLES_EACH_DIR = (uint)glm::sqrt(NUM_SAMPLES);
 const bool JITTERING = false;
 
@@ -27,6 +27,12 @@ bool vector_equals(const glm::vec3 &a, const glm::vec3 &b) {
 	) return true;
 	return false;
 }
+
+// Forward declare
+glm::vec3 get_ray_color(glm::vec3 a, glm::vec3 b, const glm::vec3 & ambient, const std::list<Light *> & lights,
+			  		    uint hits_allowed, SceneNode * node, uint pixelx, uint pixely, uint imagew, uint imageh);
+//
+
 
 glm::vec3 get_background_pixel (uint x, uint y, uint w, uint h) {
 	// Was just playing around, but this makes a really cool pattern
@@ -126,23 +132,28 @@ glm::vec3 get_reflected_color(glm::vec3 a, glm::vec3 p, glm::vec3 N,
 						      double shininess, const glm::vec3 & ambient,
 						      const std::list<Light *> & lights,
 							  uint hits_allowed, SceneNode * node,
-							  Intersection * prev_intersection) {
+							  Intersection * prev_intersection,
+							  uint x, uint y, uint w, uint h) {
   	glm::vec3 colour = glm::vec3(0.0,0.0,0.0);
+
+	// direct light reflection
   	for (Light * light : lights) {
   		if (cast_shadow_ray(p, N, light->position, node, prev_intersection)) continue;
-
   		glm::vec3 l = light->position - p;
   		glm::vec3 r = -l + 2.0*(glm::dot(l,N))*N;
-
   		colour += glm::pow(glm::dot(glm::normalize(r), glm::normalize(a - p)), shininess) * light->colour;
   	}
-  	return colour;
+
+  	// reflections
+	glm::vec3 r = (p-a) - 2*N*glm::dot(N, p-a);
+	return colour + get_ray_color(p,r,ambient, lights, hits_allowed, node, x, y, w, h);
 }
 
 glm::vec3 get_color_of_intersection(Intersection *intersection, glm::vec3 a, glm::vec3 b,
 								    const glm::vec3 & ambient, const std::list<Light *> & lights,
-								    uint hits_allowed, SceneNode * node) {
-	// Node will be used to determine shadows
+								    uint hits_allowed, SceneNode * node,
+								    uint pixelx, uint pixely,
+									uint imagew, uint imageh) {
 	// a---->b is ray
 	// hits_allowed will decrease if tracing reflections
 	if (!intersection->has_intersected) {
@@ -167,11 +178,8 @@ glm::vec3 get_color_of_intersection(Intersection *intersection, glm::vec3 a, glm
   	glm::vec3 col = ke + entrywise_multiply(kd, ambient); // ka = kd
 
   	glm::vec3 p = ray_point_at_parameter(a, b, intersection->t);
-
 	glm::vec3 p_model = intersection->local_intersection;
-
   	glm::vec3 N_model = intersection->node->m_primitive->get_normal_at_point(p_model, intersection);
-
   	glm::vec3 N = glm::vec3(glm::transpose(intersection->invtrans) * glm::vec4(N_model, 1.0));
   	if (!vector_equals(N, ZERO_VECTOR3)) {
   		N = glm::normalize(N);
@@ -185,11 +193,27 @@ glm::vec3 get_color_of_intersection(Intersection *intersection, glm::vec3 a, glm
 
   	if (!vector_equals(ks, ZERO_VECTOR3) && hits_allowed > 0) {
   		// Do a reflection
-  		glm::vec3 ref_col = get_reflected_color(a, p, N, shininess, ambient, lights, hits_allowed - 1, node, intersection);
+  		glm::vec3 ref_col = get_reflected_color(a, p, N, shininess, ambient, lights, hits_allowed - 1, node, intersection, pixelx, pixely, imagew, imageh);
   		col += entrywise_multiply(ks, ref_col);
   	}
 
 	return col;
+}
+
+glm::vec3 get_ray_color(glm::vec3 a, glm::vec3 b, 
+						const glm::vec3 & ambient, const std::list<Light *> & lights,
+						uint hits_allowed, SceneNode * node,
+						uint pixelx, uint pixely,
+						uint imagew, uint imageh) {
+	Intersection *intersection = recursive_intersect(a, b, node, glm::mat4(), NULL);
+	glm::vec3 color;
+	if (!intersection->has_intersected) {
+		color = get_background_pixel(pixelx,pixely,imagew,imageh);
+	} else {
+		color = get_color_of_intersection(intersection, a, b, ambient, lights, hits_allowed, node, pixelx, pixely, imagew, imageh);
+	}
+	delete intersection;
+	return color;
 }
 
 glm::mat4 screen_to_world(uint nx, uint ny,
@@ -247,13 +271,7 @@ void ray_trace(uint x, uint y, uint w, uint h,
 					0.0, 1.0
 				));
 			}
-			Intersection *intersection = recursive_intersect(eye, pixel, node, glm::mat4(), NULL);
-			if (!intersection->has_intersected) {
-				color += get_background_pixel(x,y,w,h);
-			} else {
-				color += get_color_of_intersection(intersection, eye, pixel, ambient, lights, MAX_HITS, node);
-			}
-			delete intersection;
+			color += get_ray_color(eye, pixel, ambient, lights, MAX_BOUNCES, node, x, y, w, h);
 		}
 	}
 	color = color / (NUM_SAMPLES_EACH_DIR * NUM_SAMPLES_EACH_DIR);
