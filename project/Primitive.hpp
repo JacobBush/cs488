@@ -13,7 +13,7 @@ protected:
   // 10^-10
   const double EPSILON = 1.0/1024.0;
   const double SPHERE_EPSILON = EPSILON / 64.0;
-  const double CUBE_BB_EPSILON = 0.0;
+  const double CUBE_BB_EPSILON = EPSILON / 64.0;
   const double CUBE_EPSILON = EPSILON / 64.0;
   const double PLANE_EPSILON = EPSILON / 64.0;
   const double MESH_EPSILON = EPSILON / 64.0;

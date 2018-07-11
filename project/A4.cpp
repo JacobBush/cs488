@@ -30,19 +30,20 @@ bool vector_equals(const glm::vec3 &a, const glm::vec3 &b) {
 
 // Forward declare
 glm::vec3 get_ray_color(glm::vec3 a, glm::vec3 b, const glm::vec3 & ambient, const std::list<Light *> & lights,
-			  		    uint hits_allowed, SceneNode * node, uint pixelx, uint pixely, uint imagew, uint imageh);
+			  		    uint hits_allowed, SceneNode * node, uint pixelx, uint pixely, uint imagew, uint imageh, bool is_reflection);
 //
 
 
-glm::vec3 get_background_pixel (uint x, uint y, uint w, uint h) {
+glm::vec3 get_background_pixel (uint x, uint y, uint w, uint h, bool is_reflection) {
 	// Was just playing around, but this makes a really cool pattern
 	// different numbers give different patterns, with primes being
 	// the most interesting
 	// If the prime is low, you get extremely cool patterns
 	// For larger primes, you get a random-star effect
+
 	static const uint PRIME = 811;
-	if ((x + y)*(x - y) % PRIME == 0 && x < y) return glm::vec3(1.0);
-	if ((w + h - x - y)*(w - x - h + y) % PRIME == 0 && y < x) return glm::vec3(1.0);
+	if ((x + y)*(x - y) % PRIME == 0 && x < y && !is_reflection) return glm::vec3(1.0);
+	if ((w + h - x - y)*(w - x - h + y) % PRIME == 0 && y < x && !is_reflection) return glm::vec3(1.0);
 
 	return glm::vec3(
 		0.5 - 0.4 * (double)x / (double)w,
@@ -134,12 +135,18 @@ glm::vec3 get_reflected_color(glm::vec3 a, glm::vec3 p, glm::vec3 N,
 							  uint hits_allowed, SceneNode * node,
 							  Intersection * prev_intersection,
 							  uint x, uint y, uint w, uint h) {
-	static const double DAMPING_FACTOR = 1.0;
+	static const double DAMPING_FACTOR = 0.5;
 
-	if (hits_allowed <= 0) return glm::vec3(0.0,0.0,0.0);
+	if (hits_allowed <= 0) return glm::vec3();
   	// reflections
 	glm::vec3 r = (p-a) - 2*N*glm::dot(N, p-a);
-	return DAMPING_FACTOR * get_ray_color(p, r + p, ambient, lights, hits_allowed, node, x, y, w, h);
+	//double cosangle = glm::dot(glm::normalize(r), glm::normalize(a - p));
+	//if (cosangle <= EPSILON) return glm::vec3(0.0,0.0,0.0); // wrong side
+
+	glm::vec3 color = get_ray_color(p, r + p, ambient, lights, hits_allowed, node, x, y, w, h, true);
+	//color = glm::pow(cosangle, shininess) * color;
+
+	return DAMPING_FACTOR * color;
 }
 
 glm::vec3 get_color_of_intersection(Intersection *intersection, glm::vec3 a, glm::vec3 b,
@@ -149,6 +156,9 @@ glm::vec3 get_color_of_intersection(Intersection *intersection, glm::vec3 a, glm
 									uint imagew, uint imageh) {
 	// a---->b is ray
 	// hits_allowed will decrease if tracing reflections
+
+	const static double DAMPING_FACTOR = 0.4;
+
 	if (!intersection->has_intersected) {
 		std::cout << "set_pixel called with !intersect.has_intersected" << std::endl;
 		delete intersection;
@@ -168,7 +178,7 @@ glm::vec3 get_color_of_intersection(Intersection *intersection, glm::vec3 a, glm
   	glm::vec3 ks = p_mat->get_ks();
   	double shininess = p_mat->get_shininess();
 
-  	glm::vec3 col = ke + entrywise_multiply(kd, ambient); // ka = kd
+  	glm::vec3 col = ke + DAMPING_FACTOR * entrywise_multiply(kd, ambient); // ka = kd
 
   	glm::vec3 p = ray_point_at_parameter(a, b, intersection->t);
 	glm::vec3 p_model = intersection->local_intersection;
@@ -205,11 +215,11 @@ glm::vec3 get_ray_color(glm::vec3 a, glm::vec3 b,
 						const glm::vec3 & ambient, const std::list<Light *> & lights,
 						uint hits_allowed, SceneNode * node,
 						uint pixelx, uint pixely,
-						uint imagew, uint imageh) {
+						uint imagew, uint imageh, bool is_reflection) {
 	Intersection *intersection = recursive_intersect(a, b, node, glm::mat4(), NULL);
 	glm::vec3 color;
 	if (!intersection->has_intersected) {
-		color = get_background_pixel(pixelx,pixely,imagew,imageh);
+		color = get_background_pixel(pixelx,pixely,imagew,imageh, is_reflection);
 	} else {
 		color = get_color_of_intersection(intersection, a, b, ambient, lights, hits_allowed, node, pixelx, pixely, imagew, imageh);
 	}
@@ -272,7 +282,7 @@ void ray_trace(uint x, uint y, uint w, uint h,
 					0.0, 1.0
 				));
 			}
-			color += get_ray_color(eye, pixel, ambient, lights, MAX_HITS, node, x, y, w, h);
+			color += get_ray_color(eye, pixel, ambient, lights, MAX_HITS, node, x, y, w, h, false);
 		}
 	}
 	color = color / (NUM_SAMPLES_EACH_DIR * NUM_SAMPLES_EACH_DIR);

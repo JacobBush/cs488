@@ -166,11 +166,13 @@ Intersection *Mesh::intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_i
 	Intersection *i = new Intersection();
 	for (Triangle tri : m_faces) {
 		double tprime = triangle_intersection(tri, a, b);
-		if (!i->has_intersected || (!isnan(tprime) && tprime < i->t)) {
-			if (prev_intersection && prev_intersection->tri == &tri) {
+		if (!i->has_intersected || i->t < MESH_EPSILON || 
+			!isnan(tprime) && tprime < i->t && tprime >= MESH_EPSILON) {
+			// No need to use this really
+			//if (prev_intersection && prev_intersection->tri == &tri) {
 				// triangles shouldn't have self intersection
-				continue;
-			}
+				//continue;
+			//}
 			delete i;
 			i = new Intersection(tprime);
 			i->tri = new Triangle(tri.v1, tri.v2, tri.v3);

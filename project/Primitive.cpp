@@ -96,7 +96,8 @@ Intersection *Cube::intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_i
 	for (uint i = 0; i < 3; i++) {
 		for (uint j = 0; j <= 1; j++) {
 			double tprime = intersect_side(i, j, a, b);
-			if (isnan(t) || (!isnan(tprime) && tprime < t)) t = tprime;
+			if (isnan(t) || t < E || (!isnan(tprime) && tprime >= E && tprime < t))
+				t = tprime;
 		}
 	}
 	if (isnan(t) || t < E) {
