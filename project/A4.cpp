@@ -6,8 +6,9 @@
 #include "A4.hpp"
 #include "GeometryNode.hpp"
 #include "PhongMaterial.hpp"
+#include "Dialectric.hpp"
 
-const uint MAX_HITS = 3;
+const uint MAX_HITS = 4;
 const uint NUM_SAMPLES = 1;
 const uint NUM_SAMPLES_EACH_DIR = (uint)glm::sqrt(NUM_SAMPLES);
 const bool JITTERING = false;
@@ -105,80 +106,65 @@ Intersection *recursive_intersect(glm::vec3 a, glm::vec3 b, SceneNode *node, glm
 	return i;
 }
 
-bool cast_shadow_ray(glm::vec3 hit, glm::vec3 norm, glm::vec3 light_pos, SceneNode *node, Intersection * prev_intersection) {
+double cast_shadow_ray(glm::vec3 hit, glm::vec3 norm, glm::vec3 light_pos, SceneNode *node, Intersection * prev_intersection) {
 	// true if shadow cast
 	if (glm::dot(light_pos-hit, norm) <= EPSILON) { // not on same side as light
-		return true;
+		return 1.0;
 	}
 	Intersection *intersection = recursive_intersect(hit, light_pos, node, glm::mat4(), prev_intersection);
 	if (intersection->has_intersected && intersection->t > 0.0 && intersection->t < 1.0) { // there's a shadow cast
 		delete intersection;
-		return true;
+		return 1.0;
 	}
 	delete intersection;
-	return false;
+	return 0.0;
 }
 
 glm::vec3 direct_light(const glm::vec3 &p, const glm::vec3 &N, Light *light, SceneNode *node, Intersection * prev_intersection) {
-	if (cast_shadow_ray(p, N, light->position, node, prev_intersection)) return glm::vec3(0.0,0.0,0.0);
+	double percent_shadow = cast_shadow_ray(p, N, light->position, node, prev_intersection);
 
 	glm::vec3 surface_to_light = light->position - p;
 	double dist = glm::length(surface_to_light);
 
-	return light->colour * (glm::dot(glm::normalize(surface_to_light), N)) / 
+	return (1.0 - percent_shadow) * light->colour * (glm::dot(glm::normalize(surface_to_light), N)) / 
 		   (light->falloff[0] + light->falloff[1]*dist + light->falloff[2]*dist*dist);
 }
 
-glm::vec3 get_reflected_color(glm::vec3 a, glm::vec3 p, glm::vec3 N,
-						      double shininess, const glm::vec3 & ambient,
+glm::vec3 get_reflected_color(glm::vec3 a, glm::vec3 p, glm::vec3 N, const glm::vec3 & ambient,
 						      const std::list<Light *> & lights,
 							  uint hits_allowed, SceneNode * node,
 							  Intersection * prev_intersection,
 							  uint x, uint y, uint w, uint h) {
-	static const double DAMPING_FACTOR = 0.5;
-
 	if (hits_allowed <= 0) return glm::vec3();
-  	// reflections
 	glm::vec3 r = (p-a) - 2*N*glm::dot(N, p-a);
-	//double cosangle = glm::dot(glm::normalize(r), glm::normalize(a - p));
-	//if (cosangle <= EPSILON) return glm::vec3(0.0,0.0,0.0); // wrong side
-
-	glm::vec3 color = get_ray_color(p, r + p, ambient, lights, hits_allowed, node, x, y, w, h, true);
-	//color = glm::pow(cosangle, shininess) * color;
-
-	return DAMPING_FACTOR * color;
+	return get_ray_color(p, r + p, ambient, lights, hits_allowed, node, x, y, w, h, true);
 }
 
-glm::vec3 get_color_of_intersection(Intersection *intersection, glm::vec3 a, glm::vec3 b,
-								    const glm::vec3 & ambient, const std::list<Light *> & lights,
-								    uint hits_allowed, SceneNode * node,
-								    uint pixelx, uint pixely,
-									uint imagew, uint imageh) {
-	// a---->b is ray
-	// hits_allowed will decrease if tracing reflections
+glm::vec3 get_transmitted_color(glm::vec3 a, glm::vec3 p, glm::vec3 N, const glm::vec3 & ambient,
+						      const std::list<Light *> & lights,
+							  uint hits_allowed, SceneNode * node,
+							  Intersection * prev_intersection,
+							  uint x, uint y, uint w, uint h) {
+	return glm::vec3(0.0);
+}
 
-	const static double DAMPING_FACTOR = 0.4;
+glm::vec3 get_color_of_intersection_phong(Intersection *intersection, PhongMaterial *p_mat,
+										  glm::vec3 a, glm::vec3 b,
+									      const glm::vec3 & ambient, const std::list<Light *> & lights,
+									      uint hits_allowed, SceneNode * node,
+									      uint pixelx, uint pixely,
+										  uint imagew, uint imageh) {
 
-	if (!intersection->has_intersected) {
-		std::cout << "set_pixel called with !intersect.has_intersected" << std::endl;
-		delete intersection;
-		throw;
-	}
+	const static double AMBIENT_DAMPING_FACTOR = 0.4;
+	const static double REFLECTION_DAMPING_FACTOR = 0.5;
 
-	Material *mat = intersection->node->m_material;
-	if (dynamic_cast<PhongMaterial*>(mat) == nullptr) {	
-    	std::cout << "Unkown material type" << std::endl;
-  	}
-
-  	PhongMaterial *p_mat = (PhongMaterial *)mat;
-
-  	glm::vec3 ke = glm::vec3(0.0,0.0,0.0); // The objects are non-emittive
+	glm::vec3 ke = glm::vec3(0.0,0.0,0.0); // The objects are non-emittive
 
   	glm::vec3 kd = p_mat->get_kd();
   	glm::vec3 ks = p_mat->get_ks();
   	double shininess = p_mat->get_shininess();
 
-  	glm::vec3 col = ke + DAMPING_FACTOR * entrywise_multiply(kd, ambient); // ka = kd
+  	glm::vec3 col = ke + AMBIENT_DAMPING_FACTOR * entrywise_multiply(kd, ambient); // ka = kd
 
   	glm::vec3 p = ray_point_at_parameter(a, b, intersection->t);
 	glm::vec3 p_model = intersection->local_intersection;
@@ -193,22 +179,82 @@ glm::vec3 get_color_of_intersection(Intersection *intersection, glm::vec3 a, glm
   			col += entrywise_multiply(kd, direct_light(p, N, light,node, intersection));
   		}
   	}
-
+	double percent_shadow;
   	if (!vector_equals(ks, ZERO_VECTOR3)) {
   		// direct light reflection
 	  	for (Light * light : lights) {
-	  		if (cast_shadow_ray(p, N, light->position, node, intersection)) continue;
+	  		percent_shadow = cast_shadow_ray(p, N, light->position, node, intersection);
 	  		glm::vec3 l = light->position - p;
 	  		glm::vec3 r = -l + 2.0*(glm::dot(l,N))*N;
-	  		col += entrywise_multiply(ks, glm::pow(glm::dot(glm::normalize(r), glm::normalize(a - p)), shininess) * light->colour);
+	  		col += (1.0 - percent_shadow) * entrywise_multiply(ks, glm::pow(glm::dot(glm::normalize(r), glm::normalize(a - p)), shininess) * light->colour);
 	  	}
 
   		// Do a reflection
-  		glm::vec3 ref_col = get_reflected_color(a, p, N, shininess, ambient, lights, hits_allowed - 1, node, intersection, pixelx, pixely, imagew, imageh);
-  		col += entrywise_multiply(ks, ref_col);
+  		glm::vec3 ref_col = get_reflected_color(a, p, N, ambient, lights, hits_allowed - 1, node, intersection, pixelx, pixely, imagew, imageh);
+  		col += REFLECTION_DAMPING_FACTOR * entrywise_multiply(ks, ref_col);
   	}
 
 	return col;
+}
+
+glm::vec3 get_color_of_intersection_dialectric(Intersection *intersection, Dialectric* d_mat,
+											   glm::vec3 a, glm::vec3 b,
+										       const glm::vec3 & ambient, const std::list<Light *> & lights,
+										       uint hits_allowed, SceneNode * node,
+										       uint pixelx, uint pixely,
+											   uint imagew, uint imageh) {
+	glm::vec3 p = ray_point_at_parameter(a, b, intersection->t);
+	glm::vec3 p_model = intersection->local_intersection;
+  	glm::vec3 N_model = intersection->node->m_primitive->get_normal_at_point(p_model, intersection);
+  	glm::vec3 N = glm::vec3(glm::transpose(intersection->invtrans) * glm::vec4(N_model, 1.0));
+
+  	glm::vec3 D = b - a;
+  	double n1, n2;
+  	if (glm::dot(D, N) >= 0) {
+  		// inside of the object (Assuming outside is air)
+  		n1 = d_mat->get_idx_ref();
+  		n2 = 1.0;
+
+  	} else {
+  		// outside of the object
+  		n1 = 1.0;
+  		n2 = d_mat->get_idx_ref();
+  	}
+
+  	glm::vec3 ref_col = get_reflected_color(a, p, N, ambient, lights, hits_allowed - 1, node, intersection, pixelx, pixely, imagew, imageh);
+  	glm::vec3 trans_col = get_transmitted_color(a, p, N, ambient, lights, hits_allowed - 1, node, intersection, pixelx, pixely, imagew, imageh);
+  	
+  	// Calculate proportion of light transmitted/reflected
+
+  	return 0.6 * ref_col + trans_col;
+
+}
+
+glm::vec3 get_color_of_intersection(Intersection *intersection, glm::vec3 a, glm::vec3 b,
+								    const glm::vec3 & ambient, const std::list<Light *> & lights,
+								    uint hits_allowed, SceneNode * node,
+								    uint pixelx, uint pixely,
+									uint imagew, uint imageh) {
+	// a---->b is ray
+	// hits_allowed will decrease if tracing reflections
+
+	if (!intersection->has_intersected) {
+		std::cout << "set_pixel called with !intersect.has_intersected" << std::endl;
+		delete intersection;
+		throw;
+	}
+
+	Material *mat = intersection->node->m_material;
+	if (dynamic_cast<PhongMaterial*>(mat) != nullptr) {	
+  		return get_color_of_intersection_phong(intersection, (PhongMaterial *)mat, a, b, ambient, lights,
+											   hits_allowed, node, pixelx, pixely, imagew, imageh);
+  	} else if (dynamic_cast<Dialectric *>(mat) != nullptr) {
+  		return get_color_of_intersection_dialectric(intersection, (Dialectric *)mat, a, b, ambient, lights,
+											        hits_allowed, node, pixelx, pixely, imagew, imageh);
+	} else {
+    	std::cout << "Unkown material type" << std::endl;
+    	throw;
+	}
 }
 
 glm::vec3 get_ray_color(glm::vec3 a, glm::vec3 b, 

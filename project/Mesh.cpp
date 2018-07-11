@@ -99,7 +99,7 @@ bool Mesh::point_on_triangle(glm::vec3 p, const Triangle & tri) {
 	
 	glm::vec3 C0 = P1-P0;
 	glm::vec3 C1 = P2-P0;
-	glm::vec3 C2 = glm::vec3(0,0,1);
+	glm::vec3 C2 = glm::vec3(0.0,0.0,1.0);
 	glm::vec3 R = p - P0;
 
 	double D = glm::determinant(glm::mat3(C0,C1,C2));

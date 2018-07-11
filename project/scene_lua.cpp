@@ -53,6 +53,7 @@
 #include "Primitive.hpp"
 #include "Material.hpp"
 #include "PhongMaterial.hpp"
+#include "Dialectric.hpp"
 #include "A4.hpp"
 
 typedef std::map<std::string,Mesh*> MeshMap;
@@ -415,6 +416,30 @@ int gr_material_cmd(lua_State* L)
   return 1;
 }
 
+
+// Create a dialectric material
+extern "C"
+int gr_dialectric_cmd(lua_State* L)
+{
+  GRLUA_DEBUG_CALL;
+  
+  gr_material_ud* data = (gr_material_ud*)lua_newuserdata(L, sizeof(gr_material_ud));
+  data->material = 0;
+  
+  double color[3];
+  get_tuple(L, 1, color, 3);
+
+  double idx_ref = luaL_checknumber(L, 2);
+  
+  data->material = new Dialectric(glm::vec3(color[0], color[1], color[2]), idx_ref);
+
+  luaL_newmetatable(L, "gr.material");
+  lua_setmetatable(L, -2);
+  
+  return 1;
+}
+
+
 // Add a child to a node
 extern "C"
 int gr_node_add_child_cmd(lua_State* L)
@@ -568,6 +593,7 @@ static const luaL_Reg grlib_functions[] = {
   // New for project
   {"torus", gr_torus_cmd},
   {"cylinder", gr_cylinder_cmd},
+  {"dialectric", gr_dialectric_cmd},
   //
   {0, 0}
 };
