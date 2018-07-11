@@ -7,7 +7,7 @@
 #include "GeometryNode.hpp"
 #include "PhongMaterial.hpp"
 
-const uint MAX_BOUNCES = 1;
+const uint MAX_HITS = 3;
 const uint NUM_SAMPLES = 1;
 const uint NUM_SAMPLES_EACH_DIR = (uint)glm::sqrt(NUM_SAMPLES);
 const bool JITTERING = false;
@@ -134,19 +134,12 @@ glm::vec3 get_reflected_color(glm::vec3 a, glm::vec3 p, glm::vec3 N,
 							  uint hits_allowed, SceneNode * node,
 							  Intersection * prev_intersection,
 							  uint x, uint y, uint w, uint h) {
-  	glm::vec3 colour = glm::vec3(0.0,0.0,0.0);
+	static const double DAMPING_FACTOR = 1.0;
 
-	// direct light reflection
-  	for (Light * light : lights) {
-  		if (cast_shadow_ray(p, N, light->position, node, prev_intersection)) continue;
-  		glm::vec3 l = light->position - p;
-  		glm::vec3 r = -l + 2.0*(glm::dot(l,N))*N;
-  		colour += glm::pow(glm::dot(glm::normalize(r), glm::normalize(a - p)), shininess) * light->colour;
-  	}
-
+	if (hits_allowed <= 0) return glm::vec3(0.0,0.0,0.0);
   	// reflections
 	glm::vec3 r = (p-a) - 2*N*glm::dot(N, p-a);
-	return colour + get_ray_color(p,r,ambient, lights, hits_allowed, node, x, y, w, h);
+	return DAMPING_FACTOR * get_ray_color(p, r + p, ambient, lights, hits_allowed, node, x, y, w, h);
 }
 
 glm::vec3 get_color_of_intersection(Intersection *intersection, glm::vec3 a, glm::vec3 b,
@@ -191,7 +184,15 @@ glm::vec3 get_color_of_intersection(Intersection *intersection, glm::vec3 a, glm
   		}
   	}
 
-  	if (!vector_equals(ks, ZERO_VECTOR3) && hits_allowed > 0) {
+  	if (!vector_equals(ks, ZERO_VECTOR3)) {
+  		// direct light reflection
+	  	for (Light * light : lights) {
+	  		if (cast_shadow_ray(p, N, light->position, node, intersection)) continue;
+	  		glm::vec3 l = light->position - p;
+	  		glm::vec3 r = -l + 2.0*(glm::dot(l,N))*N;
+	  		col += entrywise_multiply(ks, glm::pow(glm::dot(glm::normalize(r), glm::normalize(a - p)), shininess) * light->colour);
+	  	}
+
   		// Do a reflection
   		glm::vec3 ref_col = get_reflected_color(a, p, N, shininess, ambient, lights, hits_allowed - 1, node, intersection, pixelx, pixely, imagew, imageh);
   		col += entrywise_multiply(ks, ref_col);
@@ -271,7 +272,7 @@ void ray_trace(uint x, uint y, uint w, uint h,
 					0.0, 1.0
 				));
 			}
-			color += get_ray_color(eye, pixel, ambient, lights, MAX_BOUNCES, node, x, y, w, h);
+			color += get_ray_color(eye, pixel, ambient, lights, MAX_HITS, node, x, y, w, h);
 		}
 	}
 	color = color / (NUM_SAMPLES_EACH_DIR * NUM_SAMPLES_EACH_DIR);
