@@ -8,7 +8,7 @@
 #include "PhongMaterial.hpp"
 #include "Dialectric.hpp"
 
-const uint MAX_HITS = 4;
+const uint MAX_HITS = 3;
 const uint NUM_SAMPLES = 1;
 const uint NUM_SAMPLES_EACH_DIR = (uint)glm::sqrt(NUM_SAMPLES);
 const bool JITTERING = false;
@@ -70,6 +70,7 @@ glm::vec3 entrywise_multiply(const glm::vec3 &a, const glm::vec3 &b) {
 
 Intersection *intersect(glm::vec3 a, glm::vec3 b, SceneNode *node,
 					   Intersection * prev_intersection) {
+
 	if (node->m_nodeType != NodeType::GeometryNode) return new Intersection();
 	GeometryNode *geo_node = (GeometryNode *)node;
 	Intersection *i = geo_node->m_primitive->intersection(a, b, prev_intersection);
@@ -136,16 +137,30 @@ glm::vec3 get_reflected_color(glm::vec3 a, glm::vec3 p, glm::vec3 N, const glm::
 							  Intersection * prev_intersection,
 							  uint x, uint y, uint w, uint h) {
 	if (hits_allowed <= 0) return glm::vec3();
-	glm::vec3 r = (p-a) - 2*N*glm::dot(N, p-a);
-	return get_ray_color(p, r + p, ambient, lights, hits_allowed, node, x, y, w, h, true);
+	glm::vec3 R = (p-a) - 2*N*glm::dot(N, p-a);
+	return get_ray_color(p, R + p, ambient, lights, hits_allowed, node, x, y, w, h, true);
 }
 
-glm::vec3 get_transmitted_color(glm::vec3 a, glm::vec3 p, glm::vec3 N, const glm::vec3 & ambient,
-						      const std::list<Light *> & lights,
-							  uint hits_allowed, SceneNode * node,
-							  Intersection * prev_intersection,
-							  uint x, uint y, uint w, uint h) {
-	return glm::vec3(0.0);
+glm::vec3 get_transmitted_color(glm::vec3 a, glm::vec3 p, glm::vec3 N,
+							    double n1, double n2, // idx of refraction
+								const glm::vec3 & ambient,
+						        const std::list<Light *> & lights,
+							    uint hits_allowed, SceneNode * node,
+							    Intersection * prev_intersection,
+							    uint x, uint y, uint w, uint h) {
+	if (hits_allowed <= 0) return glm::vec3();
+	double cos_thetai = glm::dot(glm::normalize(a - p), N);
+	double sqrt_term = 1 - (pow(n1, 2)/pow(n2,2))*(1 - pow(cos_thetai, 2));
+	double sqrt_term_result;
+	if (sqrt_term < -EPSILON) { // Negative under sqrt -- total internal reflection
+		return glm::vec3(0.0,0.0,0.0);
+	} else if (sqrt_term >= -EPSILON && sqrt_term <= EPSILON) { // approx 0
+		sqrt_term_result = 0.0; 
+	} else {
+		sqrt_term_result = glm::sqrt(sqrt_term);
+	}
+	glm::vec3 T = glm::normalize(p - a)*(n1/n2) - N * ((n1/n2)*cos_thetai + sqrt_term_result);
+	return get_ray_color(p, T + p, ambient, lights, hits_allowed, node, x, y, w, h, true);
 }
 
 glm::vec3 get_color_of_intersection_phong(Intersection *intersection, PhongMaterial *p_mat,
@@ -170,9 +185,7 @@ glm::vec3 get_color_of_intersection_phong(Intersection *intersection, PhongMater
 	glm::vec3 p_model = intersection->local_intersection;
   	glm::vec3 N_model = intersection->node->m_primitive->get_normal_at_point(p_model, intersection);
   	glm::vec3 N = glm::vec3(glm::transpose(intersection->invtrans) * glm::vec4(N_model, 1.0));
-  	if (!vector_equals(N, ZERO_VECTOR3)) {
-  		N = glm::normalize(N);
-  	}
+	N = glm::normalize(N);  	
 
   	if (!vector_equals(kd, ZERO_VECTOR3)) {
   		for (Light * light : lights) {
@@ -207,14 +220,15 @@ glm::vec3 get_color_of_intersection_dialectric(Intersection *intersection, Diale
 	glm::vec3 p_model = intersection->local_intersection;
   	glm::vec3 N_model = intersection->node->m_primitive->get_normal_at_point(p_model, intersection);
   	glm::vec3 N = glm::vec3(glm::transpose(intersection->invtrans) * glm::vec4(N_model, 1.0));
+  	N = glm::normalize(N);
 
-  	glm::vec3 D = b - a;
+  	glm::vec3 D = glm::normalize(a - b); // reverse of ray
   	double n1, n2;
-  	if (glm::dot(D, N) >= 0) {
+  	if (glm::dot(D, N) <= 0.0) {
   		// inside of the object (Assuming outside is air)
   		n1 = d_mat->get_idx_ref();
   		n2 = 1.0;
-
+  		N = -N;
   	} else {
   		// outside of the object
   		n1 = 1.0;
@@ -222,11 +236,12 @@ glm::vec3 get_color_of_intersection_dialectric(Intersection *intersection, Diale
   	}
 
   	glm::vec3 ref_col = get_reflected_color(a, p, N, ambient, lights, hits_allowed - 1, node, intersection, pixelx, pixely, imagew, imageh);
-  	glm::vec3 trans_col = get_transmitted_color(a, p, N, ambient, lights, hits_allowed - 1, node, intersection, pixelx, pixely, imagew, imageh);
-  	
+  	glm::vec3 trans_col = get_transmitted_color(a, p, N, n1, n2, ambient, lights, hits_allowed - 1, node, intersection, pixelx, pixely, imagew, imageh);
   	// Calculate proportion of light transmitted/reflected
-
-  	return 0.6 * ref_col + trans_col;
+  	// Fresnel - Schlick's Approximation
+  	double R0 = glm::pow((n1-n2)/(n1+n2),2);
+  	double RThetai = R0 + (1.0-R0) * glm::pow(1.0 - glm::dot(D, N), 5);
+  	return RThetai * ref_col + (1.0-RThetai) * trans_col;
 
 }
 

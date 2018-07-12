@@ -22,11 +22,11 @@ plane:scale(30, 30, 30)
 
 -- the object
 
-c1 = gr.cylinder('c1', 0.25);
-scene:add_child(c1)
-c1:set_material(dial)
-c1:scale(5.0, 5.0, 5.0)
-c1:translate(2.5, 5.0, 8.0)
+s1 = gr.sphere('s1');
+scene:add_child(s1)
+s1:set_material(dial)
+s1:scale(5.0, 5.0, 5.0)
+s1:translate(2.5, 5.0, 8.0)
 
 
 gr.render(scene,
