@@ -307,3 +307,31 @@ glm::vec3 Cylinder::get_normal_at_point(glm::vec3 p, Intersection *intersection)
 	else if (p.y > 0.5 - SPHERE_EPSILON) return glm::vec3(0.0,1.0,0.0);
 	else return glm::vec3(0.0,-1.0,0.0);
 }
+
+glm::vec2 Primitive::map_to_2d(glm::vec3 p) {
+	return glm::vec2(0.0,0.0);
+}
+
+glm::vec2 NonhierSphere::map_to_2d(glm::vec3 p) {
+	return glm::vec2(0.0,0.0);
+}
+
+glm::vec2 NonhierBox::map_to_2d(glm::vec3 p) {
+	return glm::vec2(0.0,0.0);
+}
+
+glm::vec2 Sphere::map_to_2d(glm::vec3 p) {
+	return glm::vec2(0.0,0.0);
+}
+
+glm::vec2 Cube::map_to_2d(glm::vec3 p) {
+	return glm::vec2(0.0,0.0);
+}
+
+glm::vec2 Torus::map_to_2d(glm::vec3 p) {
+	return glm::vec2(0.0,0.0);
+}
+
+glm::vec2 Cylinder::map_to_2d(glm::vec3 p) {
+	return glm::vec2(0.0,0.0);
+}

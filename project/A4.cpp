@@ -8,7 +8,7 @@
 #include "PhongMaterial.hpp"
 #include "Dialectric.hpp"
 
-const uint MAX_HITS = 3;
+const uint MAX_HITS = 100;
 const uint NUM_SAMPLES = 1;
 const uint NUM_SAMPLES_EACH_DIR = (uint)glm::sqrt(NUM_SAMPLES);
 const bool JITTERING = false;
@@ -42,9 +42,11 @@ glm::vec3 get_background_pixel (uint x, uint y, uint w, uint h, bool is_reflecti
 	// If the prime is low, you get extremely cool patterns
 	// For larger primes, you get a random-star effect
 
+	if (is_reflection) return glm::vec3(0.0,0.0,0.0);
+
 	static const uint PRIME = 811;
-	if ((x + y)*(x - y) % PRIME == 0 && x < y && !is_reflection) return glm::vec3(1.0);
-	if ((w + h - x - y)*(w - x - h + y) % PRIME == 0 && y < x && !is_reflection) return glm::vec3(1.0);
+	if ((x + y)*(x - y) % PRIME == 0 && x < y) return glm::vec3(1.0);
+	if ((w + h - x - y)*(w - x - h + y) % PRIME == 0 && y < x) return glm::vec3(1.0);
 
 	return glm::vec3(
 		0.5 - 0.4 * (double)x / (double)w,
@@ -170,7 +172,7 @@ glm::vec3 get_color_of_intersection_phong(Intersection *intersection, PhongMater
 									      uint pixelx, uint pixely,
 										  uint imagew, uint imageh) {
 
-	const static double AMBIENT_DAMPING_FACTOR = 0.4;
+	const static double AMBIENT_DAMPING_FACTOR = 0.6;
 	const static double REFLECTION_DAMPING_FACTOR = 0.5;
 
 	glm::vec3 ke = glm::vec3(0.0,0.0,0.0); // The objects are non-emittive
@@ -242,7 +244,11 @@ glm::vec3 get_color_of_intersection_dialectric(Intersection *intersection, Diale
   	double R0 = glm::pow((n1-n2)/(n1+n2),2);
   	double RThetai = R0 + (1.0-R0) * glm::pow(1.0 - glm::dot(D, N), 5);
   	return RThetai * ref_col + (1.0-RThetai) * trans_col;
+}
 
+glm::vec3 get_color_of_texturemap(Intersection * intersection, TextureMap *texmap) {
+	glm::vec2 tex_coord = intersection->node->m_primitive->map_to_2d(intersection->local_intersection);
+	return texmap->get_color_at_point(tex_coord.x, tex_coord.y);
 }
 
 glm::vec3 get_color_of_intersection(Intersection *intersection, glm::vec3 a, glm::vec3 b,
@@ -259,17 +265,27 @@ glm::vec3 get_color_of_intersection(Intersection *intersection, glm::vec3 a, glm
 		throw;
 	}
 
+	glm::vec3 color = glm::vec3(0.0,0.0,0.0);
+
+	TextureMap *texmap = intersection->node->m_texture_map;
+	if (texmap != NULL) {
+		color += get_color_of_texturemap(intersection, texmap);
+	}
+
 	Material *mat = intersection->node->m_material;
-	if (dynamic_cast<PhongMaterial*>(mat) != nullptr) {	
-  		return get_color_of_intersection_phong(intersection, (PhongMaterial *)mat, a, b, ambient, lights,
-											   hits_allowed, node, pixelx, pixely, imagew, imageh);
+	if (mat == NULL) {
+		// we did not declare a material
+	} else if (dynamic_cast<PhongMaterial*>(mat) != nullptr) {	
+  		color += get_color_of_intersection_phong(intersection, (PhongMaterial *)mat, a, b, ambient, lights,
+											     hits_allowed, node, pixelx, pixely, imagew, imageh);
   	} else if (dynamic_cast<Dialectric *>(mat) != nullptr) {
-  		return get_color_of_intersection_dialectric(intersection, (Dialectric *)mat, a, b, ambient, lights,
-											        hits_allowed, node, pixelx, pixely, imagew, imageh);
+  		color += get_color_of_intersection_dialectric(intersection, (Dialectric *)mat, a, b, ambient, lights,
+											          hits_allowed, node, pixelx, pixely, imagew, imageh);
 	} else {
     	std::cout << "Unkown material type" << std::endl;
     	throw;
 	}
+	return color;
 }
 
 glm::vec3 get_ray_color(glm::vec3 a, glm::vec3 b, 

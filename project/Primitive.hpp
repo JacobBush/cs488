@@ -8,6 +8,7 @@ public:
   virtual ~Primitive();
   virtual Intersection *intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_intersection);
   virtual glm::vec3 get_normal_at_point(glm::vec3 p, Intersection *intersection);
+  virtual glm::vec2 map_to_2d(glm::vec3 p);
 
 protected:
   // 10^-10
@@ -30,6 +31,7 @@ public:
   virtual ~Sphere();
   Intersection *intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_intersection) override;
   glm::vec3 get_normal_at_point(glm::vec3 p, Intersection *intersection) override;
+  glm::vec2 map_to_2d(glm::vec3 p) override;
 };
 
 class Cube : public Primitive {
@@ -40,6 +42,7 @@ public:
   virtual ~Cube();
   Intersection *intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_intersection) override;
   glm::vec3 get_normal_at_point(glm::vec3 p, Intersection *intersection) override;
+  glm::vec2 map_to_2d(glm::vec3 p) override;
 
   bool is_bounding_box;
 
@@ -57,6 +60,7 @@ public:
   virtual ~NonhierSphere();
   Intersection *intersection(glm::vec3 a, glm::vec3 b,Intersection * prev_intersection) override;
   glm::vec3 get_normal_at_point(glm::vec3 p, Intersection *intersection) override;
+  glm::vec2 map_to_2d(glm::vec3 p) override;
 
 private:
   glm::vec3 m_pos;
@@ -73,6 +77,7 @@ public:
   virtual ~NonhierBox();
   Intersection *intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_intersection) override;
   glm::vec3 get_normal_at_point(glm::vec3 p, Intersection *intersection) override;
+  glm::vec2 map_to_2d(glm::vec3 p) override;
 
 private:
   double intersect_side(uint side, bool front, glm::vec3 a, glm::vec3 b);
@@ -91,6 +96,7 @@ public:
 
   Intersection *intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_intersection) override;
   glm::vec3 get_normal_at_point(glm::vec3 p, Intersection *intersection) override;
+  glm::vec2 map_to_2d(glm::vec3 p) override;
 private:
   double r; // radius of tube
 };
@@ -103,4 +109,5 @@ public:
 
   Intersection *intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_intersection) override;
   glm::vec3 get_normal_at_point(glm::vec3 p, Intersection *intersection) override;
+  glm::vec2 map_to_2d(glm::vec3 p) override;
 };

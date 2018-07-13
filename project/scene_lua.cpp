@@ -54,6 +54,7 @@
 #include "Material.hpp"
 #include "PhongMaterial.hpp"
 #include "Dialectric.hpp"
+#include "TextureMap.hpp"
 #include "A4.hpp"
 
 typedef std::map<std::string,Mesh*> MeshMap;
@@ -99,6 +100,11 @@ struct gr_material_ud {
 // allocated by Lua to represent lights.
 struct gr_light_ud {
   Light* light;
+};
+
+// For texture and bump maps
+struct gr_map_ud {
+  ObjectMap *map;
 };
 
 // Useful function to retrieve and check an n-tuple of numbers.
@@ -439,6 +445,25 @@ int gr_dialectric_cmd(lua_State* L)
   return 1;
 }
 
+// Create a material
+extern "C"
+int gr_texture_map_cmd(lua_State* L)
+{
+  GRLUA_DEBUG_CALL;
+
+  gr_map_ud* data = (gr_map_ud*)lua_newuserdata(L, sizeof(gr_map_ud));
+  data->map = 0;
+
+  const char* obj_fname = luaL_checkstring(L, 1);
+
+  data->map = new TextureMap( obj_fname );
+
+  luaL_getmetatable(L, "gr.texture_map");
+  lua_setmetatable(L, -2);
+
+  return 1;
+}
+
 
 // Add a child to a node
 extern "C"
@@ -480,6 +505,30 @@ int gr_node_set_material_cmd(lua_State* L)
   Material* material = matdata->material;
 
   self->setMaterial(material);
+
+  return 0;
+}
+
+// Set a node's texture map
+extern "C"
+int gr_node_set_texture_map_cmd(lua_State* L)
+{
+  GRLUA_DEBUG_CALL;
+  
+  gr_node_ud* selfdata = (gr_node_ud*)luaL_checkudata(L, 1, "gr.node");
+  luaL_argcheck(L, selfdata != 0, 1, "Node expected");
+
+  GeometryNode* self = dynamic_cast<GeometryNode*>(selfdata->node);
+
+  luaL_argcheck(L, self != 0, 1, "Geometry node expected");
+  
+  gr_map_ud* map = (gr_map_ud*)luaL_checkudata(L, 2, "gr.texture_map");
+  luaL_argcheck(L, map != 0, 2, "Map expected");
+
+  TextureMap * tm = dynamic_cast<TextureMap *>(map->map);
+  luaL_argcheck(L, tm != 0, 2, "TextureMap expected");
+
+  self->setTextureMap(tm);
 
   return 0;
 }
@@ -594,6 +643,7 @@ static const luaL_Reg grlib_functions[] = {
   {"torus", gr_torus_cmd},
   {"cylinder", gr_cylinder_cmd},
   {"dialectric", gr_dialectric_cmd},
+  {"texture_map", gr_texture_map_cmd},
   //
   {0, 0}
 };
@@ -618,6 +668,8 @@ static const luaL_Reg grlib_node_methods[] = {
   {"rotate", gr_node_rotate_cmd},
   {"translate", gr_node_translate_cmd},
   {"render", gr_render_cmd},
+  // For project
+  {"set_texture_map", gr_node_set_texture_map_cmd},
   {0, 0}
 };
 

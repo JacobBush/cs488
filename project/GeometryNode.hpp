@@ -3,6 +3,7 @@
 #include "SceneNode.hpp"
 #include "Primitive.hpp"
 #include "Material.hpp"
+#include "TextureMap.hpp"
 
 class GeometryNode : public SceneNode {
 public:
@@ -10,7 +11,10 @@ public:
 		Material *mat = nullptr );
 
 	void setMaterial( Material *material );
+	void setTextureMap( TextureMap *texture_map );
 
 	Material *m_material;
 	Primitive *m_primitive;
+
+	TextureMap *m_texture_map;
 };

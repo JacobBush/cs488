@@ -200,3 +200,7 @@ glm::vec3 Mesh::get_normal_at_point(glm::vec3 p, Intersection *intersection) {
 	}
 	return glm::vec3(0.0);
 }
+
+glm::vec2 Mesh::map_to_2d(glm::vec3 p) {
+	return glm::vec2(0.0,0.0);
+}

@@ -6,6 +6,7 @@ GeometryNode::GeometryNode(
 	: SceneNode( name )
 	, m_material( mat )
 	, m_primitive( prim )
+	, m_texture_map( 0 )
 {
 	m_nodeType = NodeType::GeometryNode;
 }
@@ -24,4 +25,10 @@ void GeometryNode::setMaterial( Material *mat )
 	//     crash the program.
 
 	m_material = mat;
+}
+
+
+void GeometryNode::setTextureMap( TextureMap * tm )
+{
+	m_texture_map = tm;
 }
