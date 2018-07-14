@@ -3,7 +3,7 @@
 --
 
 ground = gr.material({0.1, 0.7, 0.1}, {0.0, 0.0, 0.0}, 0)
-item1 = gr.material({0.5, 0.5, 0.5}, {0.0, 0.0, 0.0}, 0)
+item1 = gr.material({0.5, 0.5, 0.5}, {3.0, 3.0, 3.0}, 20)
 
 tm = gr.texture_map('Assets/textures/Checkerboard_pattern.png')
 

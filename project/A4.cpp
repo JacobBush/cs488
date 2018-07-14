@@ -188,10 +188,8 @@ glm::vec3 get_color_of_intersection_phong(Intersection *intersection, PhongMater
   	double shininess = p_mat->get_shininess();
 
   	TextureMap *texmap = intersection->node->m_texture_map;
-	if (texmap != NULL) {
-		kd = get_color_of_texturemap(intersection, texmap); // so we can still have accurate lighting
-		std::cout << to_string(kd) << std::endl;
-	}
+	if (texmap != NULL)
+		kd = get_color_of_texturemap(intersection, texmap);
 
   	glm::vec3 col = ke + AMBIENT_DAMPING_FACTOR * entrywise_multiply(kd, ambient); // ka = kd
 
