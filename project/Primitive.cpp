@@ -5,6 +5,7 @@
 
 #include "polyroots.hpp"
 
+const double PI = 3.14159265359;
 double sq(double x) {return x*x;}
 
 glm::vec3 Primitive::ray_point_at_parameter(const glm::vec3 &a, const glm::vec3 &b, double t) {
@@ -321,7 +322,32 @@ glm::vec2 NonhierBox::map_to_2d(glm::vec3 p) {
 }
 
 glm::vec2 Sphere::map_to_2d(glm::vec3 p) {
-	return glm::vec2(0.0,0.0);
+	// Using spherical coordinates: 
+	//	http://mathworld.wolfram.com/SphericalCoordinates.html
+	//	https://en.wikipedia.org/wiki/Spherical_coordinate_system
+
+	// normalize p so that it is on the surface of the sphere (sphere is unit at origin)
+	p = glm::normalize(p);
+
+	double a = p.y; // radius 1
+	double b = p.z/p.x;
+
+	// account for numerical imprecision - required for domain of acos
+	if (a < -1.0) a = -1.0;
+	if (a > 1.0) a = 1.0;
+
+	double theta = acos(a);
+	double phi = atan(b);
+
+	double x = theta / PI;
+	double y = (phi + PI/2) / PI;
+
+	if (x < 0.0) x = 0.0;
+	if (x > 1.0) x = 1.0;
+	if (y < 0.0) y = 0.0;
+	if (y > 1.0) y = 1.0;
+
+	return glm::vec2(x,y);
 }
 
 glm::vec2 Cube::map_to_2d(glm::vec3 p) {

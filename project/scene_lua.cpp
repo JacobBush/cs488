@@ -458,7 +458,7 @@ int gr_texture_map_cmd(lua_State* L)
 
   data->map = new TextureMap( obj_fname );
 
-  luaL_getmetatable(L, "gr.texture_map");
+  luaL_newmetatable(L, "gr.map");
   lua_setmetatable(L, -2);
 
   return 1;
@@ -522,7 +522,7 @@ int gr_node_set_texture_map_cmd(lua_State* L)
 
   luaL_argcheck(L, self != 0, 1, "Geometry node expected");
   
-  gr_map_ud* map = (gr_map_ud*)luaL_checkudata(L, 2, "gr.texture_map");
+  gr_map_ud* map = (gr_map_ud*)luaL_checkudata(L, 2, "gr.map");
   luaL_argcheck(L, map != 0, 2, "Map expected");
 
   TextureMap * tm = dynamic_cast<TextureMap *>(map->map);

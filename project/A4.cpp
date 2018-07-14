@@ -109,6 +109,12 @@ Intersection *recursive_intersect(glm::vec3 a, glm::vec3 b, SceneNode *node, glm
 	return i;
 }
 
+glm::vec3 get_color_of_texturemap(Intersection * intersection, TextureMap *texmap) {
+	glm::vec2 tex_coord = intersection->node->m_primitive->map_to_2d(intersection->local_intersection);
+	glm::vec4 expanded_color = texmap->get_color_at_point(tex_coord.x, tex_coord.y);
+	return glm::vec3(expanded_color); // truncate alpha value
+}
+
 double cast_shadow_ray(glm::vec3 hit, glm::vec3 norm, glm::vec3 light_pos, SceneNode *node, Intersection * prev_intersection) {
 	// true if shadow cast
 	if (glm::dot(light_pos-hit, norm) <= EPSILON) { // not on same side as light
@@ -181,6 +187,12 @@ glm::vec3 get_color_of_intersection_phong(Intersection *intersection, PhongMater
   	glm::vec3 ks = p_mat->get_ks();
   	double shininess = p_mat->get_shininess();
 
+  	TextureMap *texmap = intersection->node->m_texture_map;
+	if (texmap != NULL) {
+		kd = get_color_of_texturemap(intersection, texmap); // so we can still have accurate lighting
+		std::cout << to_string(kd) << std::endl;
+	}
+
   	glm::vec3 col = ke + AMBIENT_DAMPING_FACTOR * entrywise_multiply(kd, ambient); // ka = kd
 
   	glm::vec3 p = ray_point_at_parameter(a, b, intersection->t);
@@ -246,11 +258,6 @@ glm::vec3 get_color_of_intersection_dialectric(Intersection *intersection, Diale
   	return RThetai * ref_col + (1.0-RThetai) * trans_col;
 }
 
-glm::vec3 get_color_of_texturemap(Intersection * intersection, TextureMap *texmap) {
-	glm::vec2 tex_coord = intersection->node->m_primitive->map_to_2d(intersection->local_intersection);
-	return texmap->get_color_at_point(tex_coord.x, tex_coord.y);
-}
-
 glm::vec3 get_color_of_intersection(Intersection *intersection, glm::vec3 a, glm::vec3 b,
 								    const glm::vec3 & ambient, const std::list<Light *> & lights,
 								    uint hits_allowed, SceneNode * node,
@@ -267,15 +274,13 @@ glm::vec3 get_color_of_intersection(Intersection *intersection, glm::vec3 a, glm
 
 	glm::vec3 color = glm::vec3(0.0,0.0,0.0);
 
-	TextureMap *texmap = intersection->node->m_texture_map;
-	if (texmap != NULL) {
-		color += get_color_of_texturemap(intersection, texmap);
-	}
-
 	Material *mat = intersection->node->m_material;
 	if (mat == NULL) {
 		// we did not declare a material
-	} else if (dynamic_cast<PhongMaterial*>(mat) != nullptr) {	
+		mat = new PhongMaterial(glm::vec3(0.0), glm::vec3(0.0), 0.0);
+	}
+
+	if (dynamic_cast<PhongMaterial*>(mat) != nullptr) {	
   		color += get_color_of_intersection_phong(intersection, (PhongMaterial *)mat, a, b, ambient, lights,
 											     hits_allowed, node, pixelx, pixely, imagew, imageh);
   	} else if (dynamic_cast<Dialectric *>(mat) != nullptr) {

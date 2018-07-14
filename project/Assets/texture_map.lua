@@ -3,9 +3,9 @@
 --
 
 ground = gr.material({0.1, 0.7, 0.1}, {0.0, 0.0, 0.0}, 0)
-item1 = gr.material({0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, 0)
+item1 = gr.material({0.5, 0.5, 0.5}, {0.0, 0.0, 0.0}, 0)
 
-tm = gr.texture_map('Assets/textures/Checkerboard_pattern.bmp')
+tm = gr.texture_map('Assets/textures/Checkerboard_pattern.png')
 
 -- ##############################################
 -- the scene
@@ -25,7 +25,7 @@ plane:scale(30, 30, 30)
 
 s1 = gr.sphere('s1', 0.25);
 scene:add_child(s1)
---s1:set_material(item1)
+s1:set_material(item1)
 s1:set_texture_map(tm)
 s1:scale(5.0, 5.0, 5.0)
 s1:translate(2.5, 5.0, 8.0)
