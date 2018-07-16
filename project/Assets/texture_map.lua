@@ -3,9 +3,10 @@
 --
 
 ground = gr.material({0.1, 0.7, 0.1}, {0.0, 0.0, 0.0}, 0)
-item1 = gr.material({0.5, 0.5, 0.5}, {3.0, 3.0, 3.0}, 20)
+item1 = gr.material({0.5, 0.5, 0.5}, {0.3,0.3,0.3}, 20)
 
-tm = gr.texture_map('Assets/textures/Checkerboard_pattern.png')
+tm1 = gr.texture_map('Assets/textures/checker_large.png')
+-- tm2 = gr.texture_map('nonhier.png')
 
 -- ##############################################
 -- the scene
@@ -25,10 +26,26 @@ plane:scale(30, 30, 30)
 
 s1 = gr.sphere('s1', 0.25);
 scene:add_child(s1)
-s1:set_material(item1)
-s1:set_texture_map(tm)
-s1:scale(5.0, 5.0, 5.0)
-s1:translate(2.5, 5.0, 8.0)
+--s1:set_material(item1)
+s1:set_texture_map(tm1)
+s1:scale(4.0, 4.0, 4.0)
+s1:translate(-4.5, 3.0, 8.0)
+
+s2 = gr.cube('s2', 0.25);
+scene:add_child(s2)
+-- s2:set_material(item1)
+s2:set_texture_map(tm1)
+s2:translate(-0.5,-0.5,-0.5)
+s2:rotate('z', 180)
+s2:rotate('y', 180)
+s2:rotate('y', 45)
+s2:scale(4.5, 4.5, 4.5)
+s2:translate(4, 2.5, 8.5)
+-- s2:rotate('y', 90)
+-- s2:rotate('z', 90)
+-- s2:rotate('x', -30)
+-- s2:scale(4.0, 4.0, 4.0)
+-- s2:translate(4.5, 3.0, 8.0)
 
 gr.render(scene,
 	  'texture_map.png', 512, 512,

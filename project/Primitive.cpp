@@ -107,6 +107,22 @@ Intersection *Cube::intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_i
 	return new Intersection(t);
 }
 
+Intersection *NonhierBox::intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_intersection) {
+	// where (b-a) defines a ray.
+	double t = nan("");
+	for (uint i = 0; i < 3; i++) {
+		for (uint j = 0; j <= 1; j++) {
+			double tprime = intersect_side(i, j, a, b);
+			if (isnan(t) || t < CUBE_EPSILON || (!isnan(tprime) && tprime >= CUBE_EPSILON && tprime < t))
+				t = tprime;
+		}
+	}
+	if (isnan(t) || t < CUBE_EPSILON) {
+		return new Intersection();
+	}
+	return new Intersection(t);
+}
+
 Intersection *NonhierSphere::intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_intersection) {
 	// where (b-a) defines a ray.
 	// -1 -> no intersection
@@ -122,11 +138,23 @@ bool Cube::point_on_side(glm::vec3 p, uint side, bool front) {
 	double E = is_bounding_box ? CUBE_BB_EPSILON : CUBE_EPSILON;
 	double sign = front ? 1.0 : -1.0;
 
-	if (glm::abs(p[side] - 0.5 - sign*0.5) > E) {return false;}
+	if (glm::abs(p[side] - 0.5 - sign*0.5) > E) return false;
 	side = (side + 1) % 3;
-	if (glm::abs(p[side] - 0.5) > 0.5 + E) {return false;}
+	if (glm::abs(p[side] - 0.5) > 0.5 + E) return false;
 	side = (side + 1) % 3;
-	if (glm::abs(p[side] - 0.5) > 0.5 + E) {return false;}
+	if (glm::abs(p[side] - 0.5) > 0.5 + E) return false;
+	return true;
+}
+
+bool NonhierBox::point_on_side(glm::vec3 p, uint side, bool front) {
+	double sign = front ? 1.0 : -1.0;
+	glm::vec3 center = m_pos + glm::vec3(m_size/2.0);
+
+	if (glm::abs(p[side] - center[side] - sign*m_size/2.0) > CUBE_EPSILON) {return false;}
+	side = (side + 1) % 3;
+	if (glm::abs(p[side] - center[side]) > m_size/2.0 + CUBE_EPSILON) {return false;}
+	side = (side + 1) % 3;
+	if (glm::abs(p[side] - center[side]) > m_size/2.0 + CUBE_EPSILON) {return false;}
 	return true;
 }
 
@@ -148,18 +176,6 @@ double Cube::intersect_side(uint side, bool front, glm::vec3 a, glm::vec3 b) {
 	return t;
 }
 
-bool NonhierBox::point_on_side(glm::vec3 p, uint side, bool front) {
-	double sign = front ? 1.0 : -1.0;
-	glm::vec3 center = m_pos + glm::vec3(m_size/2.0);
-
-	if (glm::abs(p[side] - center[side] - sign*m_size/2.0) > CUBE_EPSILON) {return false;}
-	side = (side + 1) % 3;
-	if (glm::abs(p[side] - center[side]) > m_size/2.0 + CUBE_EPSILON) {return false;}
-	side = (side + 1) % 3;
-	if (glm::abs(p[side] - center[side]) > m_size/2.0 + CUBE_EPSILON) {return false;}
-	return true;
-}
-
 double NonhierBox::intersect_side(uint side, bool front, glm::vec3 a, glm::vec3 b) {
 	double sign = front ? 1.0 : -1.0;
 
@@ -178,22 +194,6 @@ double NonhierBox::intersect_side(uint side, bool front, glm::vec3 a, glm::vec3 
 	return t;
 }
 
-
-Intersection *NonhierBox::intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_intersection) {
-	// where (b-a) defines a ray.
-	double t = nan("");
-	for (uint i = 0; i < 3; i++) {
-		for (uint j = 0; j <= 1; j++) {
-			double tprime = intersect_side(i, j, a, b);
-			if (isnan(t) || (!isnan(tprime) && tprime < t)) t = tprime;
-		}
-	}
-	if (isnan(t) || t < CUBE_EPSILON) {
-		return new Intersection();
-	}
-	return new Intersection(t);
-}
-
 glm::vec3 Primitive::get_normal_at_point(glm::vec3 p, Intersection *intersection) {
 	return glm::vec3(0.0,0.0,0.0);
 }
@@ -203,16 +203,15 @@ glm::vec3 Sphere::get_normal_at_point(glm::vec3 p, Intersection *intersection) {
 }
 
 glm::vec3 Cube::get_normal_at_point(glm::vec3 p, Intersection *intersection) {
-	// We're going to assume that the point is on the cube
-	p = glm::vec3(glm::abs(p.x), glm::abs(p.y), glm::abs(p.z));
-	if (p.x < CUBE_EPSILON) return glm::vec3(-1.0, 0.0, 0.0);
-	if (p.x > 1 - CUBE_EPSILON) return glm::vec3(1.0, 0.0, 0.0);
-	if (p.y < CUBE_EPSILON) return glm::vec3(0.0, -1.0, 0.0);
-	if (p.y > 1 - CUBE_EPSILON) return glm::vec3(0.0, 1.0, 0.0);
-	if (p.y < CUBE_EPSILON) return glm::vec3(0.0, 0.0, -1.0);
-	if (p.y > 1 - CUBE_EPSILON) return glm::vec3(0.0, 0.0, 1.0);
-	// The point is inside the cube
-	return glm::vec3();
+	for (uint i = 0; i < 3; i++) {
+		for (uint j = 0; j <= 1; j++) {
+			if (point_on_side(p, i, j)) {
+				glm::vec3 N = glm::vec3(0.0,0.0,0.0);
+				N[i] = j ? 1.0 : -1.0;
+				return N;
+			}
+		}
+	}
 }
 
 glm::vec3 NonhierSphere::get_normal_at_point(glm::vec3 p, Intersection *intersection) {
@@ -309,49 +308,64 @@ glm::vec3 Cylinder::get_normal_at_point(glm::vec3 p, Intersection *intersection)
 	else return glm::vec3(0.0,-1.0,0.0);
 }
 
+// texture & bump mapping
+
+double bound_by_range(double x, double a, double b) {
+	if (x < a) x = a;
+	if (x > b) x = b;
+	return x;
+}
+
+glm::vec2 clamp_vec2(glm::vec2 v) {
+	return glm::vec2(bound_by_range(v.x, 0.0, 1.0), bound_by_range(v.y, 0.0, 1.0));
+}
+
+
 glm::vec2 Primitive::map_to_2d(glm::vec3 p) {
 	return glm::vec2(0.0,0.0);
 }
 
-glm::vec2 NonhierSphere::map_to_2d(glm::vec3 p) {
-	return glm::vec2(0.0,0.0);
+glm::vec2 NonhierSphere::map_to_2d(glm::vec3 p) { // no checks for if on sphere
+	return Sphere().map_to_2d(glm::normalize(p - m_pos));
 }
 
 glm::vec2 NonhierBox::map_to_2d(glm::vec3 p) {
 	return glm::vec2(0.0,0.0);
 }
 
-glm::vec2 Sphere::map_to_2d(glm::vec3 p) {
-	// Using spherical coordinates: 
-	//	http://mathworld.wolfram.com/SphericalCoordinates.html
-	//	https://en.wikipedia.org/wiki/Spherical_coordinate_system
-
-	// normalize p so that it is on the surface of the sphere (sphere is unit at origin)
-	p = glm::normalize(p);
-
-	double a = p.y; // radius 1
-	double b = p.z/p.x;
-
-	// account for numerical imprecision - required for domain of acos
-	if (a < -1.0) a = -1.0;
-	if (a > 1.0) a = 1.0;
-
-	double theta = acos(a);
-	double phi = atan(b);
-
-	double x = theta / PI;
-	double y = (phi + PI/2) / PI;
-
-	if (x < 0.0) x = 0.0;
-	if (x > 1.0) x = 1.0;
-	if (y < 0.0) y = 0.0;
-	if (y > 1.0) y = 1.0;
-
-	return glm::vec2(x,y);
+glm::vec2 Sphere::map_to_2d(glm::vec3 p) { // no checks for if on sphere
+	double theta = atan2(p.z,p.x) + PI; // range is [-PI, PI] originally
+    double phi = acos(bound_by_range(p.y, -1.0, 1.0));
+    double x = bound_by_range(theta/(2.0 * PI), 0.0, 1.0);
+    double y = bound_by_range(phi/PI, 0.0, 1.0);
+    return glm::vec2(x,y);
 }
 
 glm::vec2 Cube::map_to_2d(glm::vec3 p) {
-	return glm::vec2(0.0,0.0);
+	// return Sphere().map_to_2d(glm::normalize(p - glm::vec3(0.5, 0.5, 0.5))); // bounding sphere
+	/* 0 r 0 0
+	 * t f b k
+	 * 0 l 0 0
+	 * 
+	 * Assuming (0,0) bot left corner, (1,1) top right corner
+	 */
+
+	glm::vec2 v = glm::vec2(0.0);
+
+	if (glm::abs(p.x - 1.0) < CUBE_EPSILON) { // right 
+		v = glm::vec2(p.y*0.25 + 0.25, p.z * (1.0/3.0) + (2.0/3.0));
+	} else if (glm::abs(p.x) < CUBE_EPSILON) { // left
+		v = glm::vec2(p.y*0.25 + 0.25, p.z * (1.0/3.0));
+	} else if (glm::abs(p.y - 1.0) < CUBE_EPSILON) { // top
+		v = glm::vec2(p.z*0.25, glm::abs(1.0 - p.x) * (1.0/3.0) + (1.0/3.0));
+	} else if (glm::abs(p.y) < CUBE_EPSILON) { // bottom
+		v = glm::vec2(glm::abs(1.0 - p.z)*0.25 + 0.5, glm::abs(1.0 - p.x) * (1.0/3.0) + (1.0/3.0));
+	} else if (glm::abs(p.z - 1.0) < CUBE_EPSILON) { // back
+		v = glm::vec2(p.y*0.25 + 0.75, p.x * (1.0/3.0) + (1.0/3.0));
+	} else if (glm::abs(p.z) < CUBE_EPSILON) { // front
+		v = glm::vec2(glm::abs(1.0 - p.y)*0.25 + 0.25, p.x * (1.0/3.0) + (1.0/3.0));
+	}
+	return clamp_vec2(v);
 }
 
 glm::vec2 Torus::map_to_2d(glm::vec3 p) {
@@ -359,5 +373,7 @@ glm::vec2 Torus::map_to_2d(glm::vec3 p) {
 }
 
 glm::vec2 Cylinder::map_to_2d(glm::vec3 p) {
-	return glm::vec2(0.0,0.0);
+	double theta = atan2(p.z,p.x) + PI; // range is [-PI, PI] originally
+	double x = bound_by_range(theta/(2.0 * PI), 0.0, 1.0);
+	return glm::vec2(x, bound_by_range(p.y + 0.5, 0.0, 1.0));
 }
