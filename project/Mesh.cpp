@@ -22,7 +22,6 @@ Mesh::Mesh( const std::string& fname )
 	double vx, vy, vz;
 	size_t s1, s2, s3;
 
-	glm::vec3 min, max;
 	bool have_read_val = false;
 
 	std::ifstream ifs( fname.c_str() );
@@ -34,19 +33,19 @@ Mesh::Mesh( const std::string& fname )
 			// For bounding volume
 			if (have_read_val) {
 				min = glm::vec3(
-					glm::min((double)min.x, vx),
-					glm::min((double)min.y, vy),
-					glm::min((double)min.z, vz)
+					glm::min((double)min.x, (double)vx),
+					glm::min((double)min.y, (double)vy),
+					glm::min((double)min.z, (double)vz)
 				);
 
 				max = glm::vec3(
-					glm::max((double)max.x, vx),
-					glm::max((double)max.y, vy),
-					glm::max((double)max.z, vz)
+					glm::max((double)max.x, (double)vx),
+					glm::max((double)max.y, (double)vy),
+					glm::max((double)max.z, (double)vz)
 				);
 			} else {
-				min = glm::vec3(vx, vy, vz);
-				max = glm::vec3(vx, vy, vz);
+				min = glm::vec3((double)vx, (double)vy, (double)vz);
+				max = glm::vec3((double)vx, (double)vy, (double)vz);
 				have_read_val = true;
 			}
 
@@ -202,5 +201,10 @@ glm::vec3 Mesh::get_normal_at_point(glm::vec3 p, Intersection *intersection) {
 }
 
 glm::vec2 Mesh::map_to_2d(glm::vec3 p) {
-	return glm::vec2(0.0,0.0);
+	glm::vec3 center = (min + max)/2.0;
+	// We're gonna hack the plane by moving center down (degenerate dimension == bad)
+	if (min.x == max.x) center.x -= 1;
+	if (min.y == max.y) center.y -= 1;
+	if (min.z == max.z) center.z -= 1;
+	return Sphere().map_to_2d(glm::normalize(p-center));
 }

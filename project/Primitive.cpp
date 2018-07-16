@@ -316,8 +316,8 @@ double bound_by_range(double x, double a, double b) {
 	return x;
 }
 
-glm::vec2 clamp_vec2(glm::vec2 v) {
-	return glm::vec2(bound_by_range(v.x, 0.0, 1.0), bound_by_range(v.y, 0.0, 1.0));
+glm::vec2 clamp_vec2(glm::vec2 v, double a, double b) {
+	return glm::vec2(bound_by_range(v.x, a, b), bound_by_range(v.y, a, b));
 }
 
 
@@ -330,15 +330,13 @@ glm::vec2 NonhierSphere::map_to_2d(glm::vec3 p) { // no checks for if on sphere
 }
 
 glm::vec2 NonhierBox::map_to_2d(glm::vec3 p) {
-	return glm::vec2(0.0,0.0);
+	return Cube().map_to_2d((p - m_pos) / m_size);
 }
 
 glm::vec2 Sphere::map_to_2d(glm::vec3 p) { // no checks for if on sphere
 	double theta = atan2(p.z,p.x) + PI; // range is [-PI, PI] originally
     double phi = acos(bound_by_range(p.y, -1.0, 1.0));
-    double x = bound_by_range(theta/(2.0 * PI), 0.0, 1.0);
-    double y = bound_by_range(phi/PI, 0.0, 1.0);
-    return glm::vec2(x,y);
+    return clamp_vec2(glm::vec2(theta/(2.0 * PI), phi/PI), 0.0, 1.0);
 }
 
 glm::vec2 Cube::map_to_2d(glm::vec3 p) {
@@ -346,6 +344,7 @@ glm::vec2 Cube::map_to_2d(glm::vec3 p) {
 	/* 0 r 0 0
 	 * t f b k
 	 * 0 l 0 0
+	 * 0 0 0 0
 	 * 
 	 * Assuming (0,0) bot left corner, (1,1) top right corner
 	 */
@@ -353,23 +352,26 @@ glm::vec2 Cube::map_to_2d(glm::vec3 p) {
 	glm::vec2 v = glm::vec2(0.0);
 
 	if (glm::abs(p.x - 1.0) < CUBE_EPSILON) { // right 
-		v = glm::vec2(p.y*0.25 + 0.25, p.z * (1.0/3.0) + (2.0/3.0));
+		v = glm::vec2(p.y*0.25 + 0.25, p.z * 0.25 + 0.5);
 	} else if (glm::abs(p.x) < CUBE_EPSILON) { // left
-		v = glm::vec2(p.y*0.25 + 0.25, p.z * (1.0/3.0));
+		v = glm::vec2(p.y*0.25 + 0.25, p.z * 0.25);
 	} else if (glm::abs(p.y - 1.0) < CUBE_EPSILON) { // top
-		v = glm::vec2(p.z*0.25, glm::abs(1.0 - p.x) * (1.0/3.0) + (1.0/3.0));
+		v = glm::vec2(p.z*0.25, glm::abs(1.0 - p.x) * 0.25 + 0.25);
 	} else if (glm::abs(p.y) < CUBE_EPSILON) { // bottom
-		v = glm::vec2(glm::abs(1.0 - p.z)*0.25 + 0.5, glm::abs(1.0 - p.x) * (1.0/3.0) + (1.0/3.0));
+		v = glm::vec2(glm::abs(1.0 - p.z)*0.25 + 0.5, glm::abs(1.0 - p.x) * 0.25 + 0.25);
 	} else if (glm::abs(p.z - 1.0) < CUBE_EPSILON) { // back
-		v = glm::vec2(p.y*0.25 + 0.75, p.x * (1.0/3.0) + (1.0/3.0));
+		v = glm::vec2(p.y*0.25 + 0.75, p.x * 0.25 + 0.25);
 	} else if (glm::abs(p.z) < CUBE_EPSILON) { // front
-		v = glm::vec2(glm::abs(1.0 - p.y)*0.25 + 0.25, p.x * (1.0/3.0) + (1.0/3.0));
+		v = glm::vec2(glm::abs(1.0 - p.y)*0.25 + 0.25, p.x * 0.25 + 0.25);
 	}
-	return clamp_vec2(v);
+	return clamp_vec2(v, 0.0, 1.0);
 }
 
 glm::vec2 Torus::map_to_2d(glm::vec3 p) {
-	return glm::vec2(0.0,0.0);
+	double theta = asin(bound_by_range(p.y, -1.0, 1.0)) + PI/2.0;
+	double phi = acos(bound_by_range(p.x/(1 + r * cos(theta)), -1.0, 1.0));
+	// double phi = asin(bound_by_range(p.z/(1 + r * cos(theta)), -1.0, 1.0));
+	return clamp_vec2(glm::vec2(theta/PI, phi/PI), 0.0, 1.0);
 }
 
 glm::vec2 Cylinder::map_to_2d(glm::vec3 p) {
