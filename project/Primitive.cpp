@@ -368,9 +368,9 @@ glm::vec2 Cube::map_to_2d(glm::vec3 p) {
 }
 
 glm::vec2 Torus::map_to_2d(glm::vec3 p) {
-	double theta = asin(bound_by_range(p.y, -1.0, 1.0)) + PI/2.0;
-	double phi = acos(bound_by_range(p.x/(1 + r * cos(theta)), -1.0, 1.0));
-	// double phi = asin(bound_by_range(p.z/(1 + r * cos(theta)), -1.0, 1.0));
+	double theta = asin(bound_by_range(p.y/r, -1.0, 1.0));
+	double phi = acos(bound_by_range(p.x/(1 + r * cos(theta)), -1.0, 1.0)); // can calculate with z as well
+	theta += PI/2.0; // range [-pi/2, pi/2]
 	return clamp_vec2(glm::vec2(theta/PI, phi/PI), 0.0, 1.0);
 }
 

@@ -201,10 +201,22 @@ glm::vec3 Mesh::get_normal_at_point(glm::vec3 p, Intersection *intersection) {
 }
 
 glm::vec2 Mesh::map_to_2d(glm::vec3 p) {
-	glm::vec3 center = (min + max)/2.0;
-	// We're gonna hack the plane by moving center down (degenerate dimension == bad)
-	if (min.x == max.x) center.x -= 1;
-	if (min.y == max.y) center.y -= 1;
-	if (min.z == max.z) center.z -= 1;
-	return Sphere().map_to_2d(glm::normalize(p-center));
+	// We're gonna hack the plane by checking for degenerate dimensions
+	if (min.x == max.x) { // map onto plane min.x
+		double y = (p.y - min.y) / (max.y - min.y);
+		double z = (p.z - min.z) / (max.z - min.z);
+		return glm::vec2(y,z);
+	}
+	if (min.y == max.y) { // map onto plane min.y
+		double x = (p.x - min.x) / (max.x - min.x);
+		double z = (p.z - min.z) / (max.z - min.z);
+		return glm::vec2(x,z);
+	}
+	if (min.z == max.z) { // map onto plane min.z
+		double x = (p.x - min.x) / (max.x - min.x);
+		double y = (p.y - min.y) / (max.y - min.y);
+		return glm::vec2(x,y);
+
+	}
+	return Sphere().map_to_2d(glm::normalize(p-(min + max)/2.0));
 }
