@@ -8,6 +8,7 @@
 #include "PhongMaterial.hpp"
 #include "Dialectric.hpp"
 
+
 const uint MAX_HITS = 100;
 const uint NUM_SAMPLES = 1;
 const uint NUM_SAMPLES_EACH_DIR = (uint)glm::sqrt(NUM_SAMPLES);
@@ -111,8 +112,17 @@ Intersection *recursive_intersect(glm::vec3 a, glm::vec3 b, SceneNode *node, glm
 
 glm::vec3 get_color_of_texturemap(Intersection * intersection, TextureMap *texmap) {
 	glm::vec2 tex_coord = intersection->node->m_primitive->map_to_2d(intersection->local_intersection);
-	glm::vec4 expanded_color = texmap->get_color_at_point(tex_coord.x, tex_coord.y);
-	return glm::vec3(expanded_color); // truncate alpha value
+	return texmap->get_color_at_point(tex_coord.x, tex_coord.y);
+}
+
+glm::vec3 perturb_normal_by_bumpmap(Intersection * intersection, glm::vec3 N, BumpMap *bmap) {
+        glm::vec3 Y = glm::vec3(0.0,1.0,0.0); // normal that bump perturbs
+        glm::vec3 A = glm::normalize(glm::cross(Y,N)); // axis of rotation (could be done close form)
+        double theta = acos(N.y); // rotation angle (glm::dot(Y,N))
+        glm::vec2 bump_coord = intersection->node->m_primitive->map_to_2d(intersection->local_intersection);
+        glm::vec3 Y_perturbed = bmap->get_perturbed_normal_at_point(bump_coord.x, bump_coord.y);
+        glm::vec3 N_perturbed = glm::rotate(Y_perturbed,(float)theta,A);
+        return glm::normalize(N_perturbed);
 }
 
 double cast_shadow_ray(glm::vec3 hit, glm::vec3 norm, glm::vec3 light_pos, SceneNode *node, Intersection * prev_intersection) {
@@ -197,7 +207,11 @@ glm::vec3 get_color_of_intersection_phong(Intersection *intersection, PhongMater
 	glm::vec3 p_model = intersection->local_intersection;
   	glm::vec3 N_model = intersection->node->m_primitive->get_normal_at_point(p_model, intersection);
   	glm::vec3 N = glm::vec3(glm::transpose(intersection->invtrans) * glm::vec4(N_model, 1.0));
-	N = glm::normalize(N);  	
+	N = glm::normalize(N);
+
+	BumpMap *bmap = intersection->node->m_bump_map;
+	if (bmap != NULL) 
+		N = perturb_normal_by_bumpmap(intersection, N, bmap);
 
   	if (!vector_equals(kd, ZERO_VECTOR3)) {
   		for (Light * light : lights) {
