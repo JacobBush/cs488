@@ -13,6 +13,7 @@ public:
 
 	void setMaterial( Material *material );
 	void setTextureMap( TextureMap *texture_map );
+	void setBumpMap( BumpMap *bump_map );
 
 	Material *m_material;
 	Primitive *m_primitive;

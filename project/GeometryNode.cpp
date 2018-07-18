@@ -7,6 +7,7 @@ GeometryNode::GeometryNode(
 	, m_material( mat )
 	, m_primitive( prim )
 	, m_texture_map( 0 )
+	, m_bump_map ( 0 )
 {
 	m_nodeType = NodeType::GeometryNode;
 }
@@ -31,4 +32,9 @@ void GeometryNode::setMaterial( Material *mat )
 void GeometryNode::setTextureMap( TextureMap * tm )
 {
 	m_texture_map = tm;
+}
+
+void GeometryNode::setBumpMap( BumpMap * bm )
+{
+	m_bump_map = bm;
 }

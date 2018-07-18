@@ -55,6 +55,7 @@
 #include "PhongMaterial.hpp"
 #include "Dialectric.hpp"
 #include "TextureMap.hpp"
+#include "BumpMap.hpp"
 #include "A4.hpp"
 
 typedef std::map<std::string,Mesh*> MeshMap;
@@ -445,7 +446,7 @@ int gr_dialectric_cmd(lua_State* L)
   return 1;
 }
 
-// Create a material
+// Create a texture map
 extern "C"
 int gr_texture_map_cmd(lua_State* L)
 {
@@ -457,6 +458,25 @@ int gr_texture_map_cmd(lua_State* L)
   const char* obj_fname = luaL_checkstring(L, 1);
 
   data->map = new TextureMap( obj_fname );
+
+  luaL_newmetatable(L, "gr.map");
+  lua_setmetatable(L, -2);
+
+  return 1;
+}
+
+// Create a bump map
+extern "C"
+int gr_bump_map_cmd(lua_State* L)
+{
+  GRLUA_DEBUG_CALL;
+
+  gr_map_ud* data = (gr_map_ud*)lua_newuserdata(L, sizeof(gr_map_ud));
+  data->map = 0;
+
+  const char* obj_fname = luaL_checkstring(L, 1);
+
+  data->map = new BumpMap( obj_fname );
 
   luaL_newmetatable(L, "gr.map");
   lua_setmetatable(L, -2);
@@ -529,6 +549,30 @@ int gr_node_set_texture_map_cmd(lua_State* L)
   luaL_argcheck(L, tm != 0, 2, "TextureMap expected");
 
   self->setTextureMap(tm);
+
+  return 0;
+}
+
+// Set a node's bump map
+extern "C"
+int gr_node_set_bump_map_cmd(lua_State* L)
+{
+  GRLUA_DEBUG_CALL;
+  
+  gr_node_ud* selfdata = (gr_node_ud*)luaL_checkudata(L, 1, "gr.node");
+  luaL_argcheck(L, selfdata != 0, 1, "Node expected");
+
+  GeometryNode* self = dynamic_cast<GeometryNode*>(selfdata->node);
+
+  luaL_argcheck(L, self != 0, 1, "Geometry node expected");
+  
+  gr_map_ud* map = (gr_map_ud*)luaL_checkudata(L, 2, "gr.map");
+  luaL_argcheck(L, map != 0, 2, "Map expected");
+
+  BumpMap * bm = dynamic_cast<BumpMap *>(map->map);
+  luaL_argcheck(L, bm != 0, 2, "BumpMap expected");
+
+  self->setBumpMap(bm);
 
   return 0;
 }
@@ -644,6 +688,7 @@ static const luaL_Reg grlib_functions[] = {
   {"cylinder", gr_cylinder_cmd},
   {"dialectric", gr_dialectric_cmd},
   {"texture_map", gr_texture_map_cmd},
+  {"bump_map", gr_bump_map_cmd},
   //
   {0, 0}
 };
@@ -670,6 +715,7 @@ static const luaL_Reg grlib_node_methods[] = {
   {"render", gr_render_cmd},
   // For project
   {"set_texture_map", gr_node_set_texture_map_cmd},
+  {"set_bump_map", gr_node_set_bump_map_cmd},
   {0, 0}
 };
 

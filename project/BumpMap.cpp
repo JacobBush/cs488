@@ -17,8 +17,8 @@ glm::vec3 BumpMap::get_perturbed_normal_at_point(double x, double y) {
 		return glm::vec3(0.0,0.0,0.0);
 	}
 
-	double a = round(x * (width - 1));
-	double b = round(y * (height - 1));
+	uint a = round(x * (width - 1));
+	uint b = round(y * (height - 1));
 
 	// color at point and its neighbours
     glm::vec4 P = get_value_at_point(a , b);

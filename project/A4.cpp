@@ -9,7 +9,7 @@
 #include "Dialectric.hpp"
 
 
-const uint MAX_HITS = 100;
+const uint MAX_HITS = 1;
 const uint NUM_SAMPLES = 1;
 const uint NUM_SAMPLES_EACH_DIR = (uint)glm::sqrt(NUM_SAMPLES);
 const bool JITTERING = false;
