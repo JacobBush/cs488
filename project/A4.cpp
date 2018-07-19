@@ -7,6 +7,7 @@
 #include "GeometryNode.hpp"
 #include "PhongMaterial.hpp"
 #include "Dialectric.hpp"
+#include "SpacePartition.hpp"
 
 
 const uint MAX_HITS = 1;
@@ -423,6 +424,9 @@ void A4_Render(
 	size_t w = image.width();
 
 	glm::mat4 S2W_transform = screen_to_world(w,h,eye,view,up,fovy);
+
+	SpacePartition * sp = new SpacePartition();
+	sp->initialize(root);
 
 	const uint TOTAL_PIXELS = h * w ;
 	double current_milestone = 0.00;

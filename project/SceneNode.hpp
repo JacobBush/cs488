@@ -26,8 +26,11 @@ public:
     
     const glm::mat4& get_transform() const;
     const glm::mat4& get_inverse() const;
+    const glm::mat4& get_squashed_transform() const;
+    const glm::mat4& get_squashed_inverse() const;
     
     void set_transform(const glm::mat4& m);
+    void update_squashed_transform(const glm::mat4& parent_squashed_transform);
     
     void add_child(SceneNode* child);
     
@@ -44,6 +47,10 @@ public:
     // Transformations
     glm::mat4 trans;
     glm::mat4 invtrans;
+
+    // total trans from parent down
+    glm::mat4 squashed_trans;
+    glm::mat4 squashed_invtrans;
     
     std::list<SceneNode*> children;
 
