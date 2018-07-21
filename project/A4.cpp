@@ -11,7 +11,7 @@
 
 
 const uint MAX_HITS = 20;
-const uint NUM_SAMPLES = 9;
+const uint NUM_SAMPLES = 16;
 const uint NUM_SAMPLES_EACH_DIR = (uint)glm::sqrt(NUM_SAMPLES);
 const bool JITTERING = false;
 
@@ -254,7 +254,7 @@ glm::vec3 get_color_of_intersection_dialectric(Intersection *intersection, Diale
   	N = glm::normalize(N);
 
   	glm::vec3 kd = d_mat->get_color();
-  	double shininess = 20.0;
+  	double shininess = d_mat->get_shininess();
 
   	TextureMap *texmap = intersection->node->m_texture_map;
 	if (texmap != NULL)
@@ -333,7 +333,8 @@ glm::vec3 get_color_of_intersection(Intersection *intersection, glm::vec3 a, glm
 	Material *mat = intersection->node->m_material;
 	if (mat == NULL) {
 		// we did not declare a material
-		mat = new PhongMaterial(glm::vec3(0.0), glm::vec3(0.0), 0.0);
+		intersection->node->m_material = new PhongMaterial(glm::vec3(0.0), glm::vec3(0.0), 0.0);
+		mat = intersection->node->m_material;
 	}
 
 	if (dynamic_cast<PhongMaterial*>(mat) != nullptr) {	
@@ -346,7 +347,6 @@ glm::vec3 get_color_of_intersection(Intersection *intersection, glm::vec3 a, glm
     	std::cout << "Unkown material type" << std::endl;
     	throw;
 	}
-
 	return color;
 }
 

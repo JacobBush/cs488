@@ -437,8 +437,9 @@ int gr_dialectric_cmd(lua_State* L)
   get_tuple(L, 1, color, 3);
 
   double idx_ref = luaL_checknumber(L, 2);
+  double shininess = luaL_checknumber(L, 3);
   
-  data->material = new Dialectric(glm::vec3(color[0], color[1], color[2]), idx_ref);
+  data->material = new Dialectric(glm::vec3(color[0], color[1], color[2]), idx_ref, shininess);
 
   luaL_newmetatable(L, "gr.material");
   lua_setmetatable(L, -2);
