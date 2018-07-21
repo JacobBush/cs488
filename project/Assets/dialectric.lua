@@ -4,7 +4,7 @@
 
 ground = gr.material({0.1, 0.7, 0.1}, {0.0, 0.0, 0.0}, 0)
 dial = gr.dialectric({0.0, 0.0, 0.0}, 1.52, 20)
-checker = gr.texture_map('Assets/textures/barber_pole.png')
+grid = gr.texture_map('Assets/textures/grid.png')
 
 
 -- ##############################################
@@ -18,7 +18,7 @@ scene:rotate('X', 23)
 
 plane = gr.mesh( 'plane', 'Assets/plane.obj' )
 scene:add_child(plane)
-plane:set_texture_map(checker)
+plane:set_texture_map(grid)
 plane:scale(30, 30, 30)
 
 -- the object

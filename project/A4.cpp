@@ -11,7 +11,7 @@
 
 
 const uint MAX_HITS = 20;
-const uint NUM_SAMPLES = 16;
+const uint NUM_SAMPLES = 4;
 const uint NUM_SAMPLES_EACH_DIR = (uint)glm::sqrt(NUM_SAMPLES);
 const bool JITTERING = false;
 
@@ -192,7 +192,7 @@ glm::vec3 get_color_of_intersection_phong(Intersection *intersection, PhongMater
 									      uint pixelx, uint pixely,
 										  uint imagew, uint imageh) {
 
-	const static double AMBIENT_DAMPING_FACTOR = 1.0;
+	const static double AMBIENT_DAMPING_FACTOR = 0.6;
 	const static double REFLECTION_DAMPING_FACTOR = 0.5;
 
 	glm::vec3 ke = glm::vec3(0.0,0.0,0.0); // The objects are non-emittive
@@ -247,6 +247,7 @@ glm::vec3 get_color_of_intersection_dialectric(Intersection *intersection, Diale
 										       uint hits_allowed, SceneNode * node,
 										       uint pixelx, uint pixely,
 											   uint imagew, uint imageh) {
+	const static double AMBIENT_DAMPING_FACTOR = 0.6;
 	glm::vec3 p = ray_point_at_parameter(a, b, intersection->t);
 	glm::vec3 p_model = intersection->local_intersection;
   	glm::vec3 N_model = intersection->node->m_primitive->get_normal_at_point(p_model, intersection);
@@ -265,7 +266,7 @@ glm::vec3 get_color_of_intersection_dialectric(Intersection *intersection, Diale
 		N = perturb_normal_by_bumpmap(intersection, N, bmap);
 
 	// ambient and direct light
-	glm::vec3 col = entrywise_multiply(kd, ambient);
+	glm::vec3 col = AMBIENT_DAMPING_FACTOR * entrywise_multiply(kd, ambient);
   	if (!vector_equals(kd, ZERO_VECTOR3)) {
   		for (Light * light : lights) {
   			col += entrywise_multiply(kd, direct_light(p, N, light,node, intersection));
