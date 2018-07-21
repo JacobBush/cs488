@@ -12,14 +12,14 @@ public:
 
 protected:
   // 10^-10
-  const double EPSILON = 1.0/1024.0;
-  const double SPHERE_EPSILON = EPSILON / 64.0;
-  const double CUBE_BB_EPSILON = EPSILON / 64.0;
-  const double CUBE_EPSILON = EPSILON / 64.0;
-  const double PLANE_EPSILON = EPSILON / 64.0;
-  const double MESH_EPSILON = EPSILON / 64.0;
-  const double TORUS_EPSILON = EPSILON / 64.0;
-  const double CYLINDER_EPSILON = EPSILON / 64.0;
+  const double EPSILON = 1.0/512.0;
+  const double SPHERE_EPSILON = EPSILON;
+  const double CUBE_BB_EPSILON = EPSILON;
+  const double CUBE_EPSILON = EPSILON;
+  const double PLANE_EPSILON = EPSILON;
+  const double MESH_EPSILON = EPSILON;
+  const double TORUS_EPSILON = EPSILON;
+  const double CYLINDER_EPSILON = EPSILON;
 
 
   double plane_intersection(glm::vec3 p0, glm::vec3 N, glm::vec3 a, glm::vec3 b);

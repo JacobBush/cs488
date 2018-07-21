@@ -10,8 +10,8 @@
 #include "SpacePartition.hpp"
 
 
-const uint MAX_HITS = 1;
-const uint NUM_SAMPLES = 1;
+const uint MAX_HITS = 20;
+const uint NUM_SAMPLES = 9;
 const uint NUM_SAMPLES_EACH_DIR = (uint)glm::sqrt(NUM_SAMPLES);
 const bool JITTERING = false;
 
@@ -44,11 +44,11 @@ glm::vec3 get_background_pixel (uint x, uint y, uint w, uint h, bool is_reflecti
 	// If the prime is low, you get extremely cool patterns
 	// For larger primes, you get a random-star effect
 
-	if (is_reflection) return glm::vec3(0.0,0.0,0.0);
-
-	static const uint PRIME = 811;
-	if ((x + y)*(x - y) % PRIME == 0 && x < y) return glm::vec3(1.0);
-	if ((w + h - x - y)*(w - x - h + y) % PRIME == 0 && y < x) return glm::vec3(1.0);
+	if (!is_reflection) { // stars look weird in reflection -- not in right spot
+		static const uint PRIME = 811;
+		if ((x + y)*(x - y) % PRIME == 0 && x < y) return glm::vec3(1.0);
+		if ((w + h - x - y)*(w - x - h + y) % PRIME == 0 && y < x) return glm::vec3(1.0);
+	}
 
 	return glm::vec3(
 		0.5 - 0.4 * (double)x / (double)w,
@@ -95,6 +95,9 @@ Intersection *recursive_intersect(glm::vec3 a, glm::vec3 b, SceneNode *node, glm
 	b = glm::vec3(node->invtrans * glm::vec4(b,1));
 
 	glm::mat4 invtrans =  node->invtrans * parent_invtrans;
+	// glm::mat4 invtrans = node->invtrans * node->parent_squashed_invtrans;
+
+	// std::cout << to_string(parent_invtrans - node->parent_squashed_invtrans) << std::endl;
 
 	Intersection *i = intersect(a, b, node, prev_intersection);
 	i->invtrans = invtrans;
@@ -189,7 +192,7 @@ glm::vec3 get_color_of_intersection_phong(Intersection *intersection, PhongMater
 									      uint pixelx, uint pixely,
 										  uint imagew, uint imageh) {
 
-	const static double AMBIENT_DAMPING_FACTOR = 0.6;
+	const static double AMBIENT_DAMPING_FACTOR = 1.0;
 	const static double REFLECTION_DAMPING_FACTOR = 0.5;
 
 	glm::vec3 ke = glm::vec3(0.0,0.0,0.0); // The objects are non-emittive
@@ -226,14 +229,15 @@ glm::vec3 get_color_of_intersection_phong(Intersection *intersection, PhongMater
 	  		percent_shadow = cast_shadow_ray(p, N, light->position, node, intersection);
 	  		glm::vec3 l = light->position - p;
 	  		glm::vec3 r = -l + 2.0*(glm::dot(l,N))*N;
-	  		col += (1.0 - percent_shadow) * entrywise_multiply(ks, glm::pow(glm::dot(glm::normalize(r), glm::normalize(a - p)), shininess) * light->colour);
+	  		glm::vec3 dir_light = (1.0 - percent_shadow) * entrywise_multiply(ks, glm::pow(glm::dot(glm::normalize(r), glm::normalize(a - p)), shininess) * light->colour);
+	  		if (dir_light.x < 0 || dir_light.y < 0 || dir_light.z < 0) dir_light = glm::vec3(0.0);
+	  		col += dir_light;
 	  	}
 
   		// Do a reflection
   		glm::vec3 ref_col = get_reflected_color(a, p, N, ambient, lights, hits_allowed - 1, node, intersection, pixelx, pixely, imagew, imageh);
   		col += REFLECTION_DAMPING_FACTOR * entrywise_multiply(ks, ref_col);
   	}
-
 	return col;
 }
 
@@ -248,6 +252,25 @@ glm::vec3 get_color_of_intersection_dialectric(Intersection *intersection, Diale
   	glm::vec3 N_model = intersection->node->m_primitive->get_normal_at_point(p_model, intersection);
   	glm::vec3 N = glm::vec3(glm::transpose(intersection->invtrans) * glm::vec4(N_model, 1.0));
   	N = glm::normalize(N);
+
+  	glm::vec3 kd = d_mat->get_color();
+  	double shininess = 20.0;
+
+  	TextureMap *texmap = intersection->node->m_texture_map;
+	if (texmap != NULL)
+		kd = get_color_of_texturemap(intersection, texmap);
+
+  	BumpMap *bmap = intersection->node->m_bump_map;
+	if (bmap != NULL) 
+		N = perturb_normal_by_bumpmap(intersection, N, bmap);
+
+	// ambient and direct light
+	glm::vec3 col = entrywise_multiply(kd, ambient);
+  	if (!vector_equals(kd, ZERO_VECTOR3)) {
+  		for (Light * light : lights) {
+  			col += entrywise_multiply(kd, direct_light(p, N, light,node, intersection));
+  		}
+  	}
 
   	glm::vec3 D = glm::normalize(a - b); // reverse of ray
   	double n1, n2;
@@ -264,11 +287,31 @@ glm::vec3 get_color_of_intersection_dialectric(Intersection *intersection, Diale
 
   	glm::vec3 ref_col = get_reflected_color(a, p, N, ambient, lights, hits_allowed - 1, node, intersection, pixelx, pixely, imagew, imageh);
   	glm::vec3 trans_col = get_transmitted_color(a, p, N, n1, n2, ambient, lights, hits_allowed - 1, node, intersection, pixelx, pixely, imagew, imageh);
+
+  	// if (ref_col.x < 0 || ref_col.y < 0 || ref_col.z < 0)
+  	// 	std::cout << to_string(ref_col) << std::endl;
+  	// if (trans_col.x < 0 || trans_col.y < 0 || trans_col.z < 0)
+  	// 	std::cout << to_string(trans_col) << std::endl;
+
   	// Calculate proportion of light transmitted/reflected
   	// Fresnel - Schlick's Approximation
   	double R0 = glm::pow((n1-n2)/(n1+n2),2);
   	double RThetai = R0 + (1.0-R0) * glm::pow(1.0 - glm::dot(D, N), 5);
-  	return RThetai * ref_col + (1.0-RThetai) * trans_col;
+
+  	// calculate specular reflections
+	double percent_shadow;
+  	for (Light * light : lights) {
+  		percent_shadow = cast_shadow_ray(p, N, light->position, node, intersection);
+  		glm::vec3 l = light->position - p;
+  		glm::vec3 r = -l + 2.0*(glm::dot(l,N))*N;
+  		glm::vec3 dir_light = (1.0 - percent_shadow) * RThetai * glm::pow(glm::dot(glm::normalize(r), glm::normalize(a - p)), shininess) * light->colour;
+  		if (dir_light.x < 0 || dir_light.y < 0 || dir_light.z < 0) dir_light = glm::vec3(0.0);
+  		col += dir_light;
+  	}
+
+
+  	col += RThetai * ref_col + (1.0-RThetai) * trans_col;
+  	return col;
 }
 
 glm::vec3 get_color_of_intersection(Intersection *intersection, glm::vec3 a, glm::vec3 b,
@@ -303,6 +346,7 @@ glm::vec3 get_color_of_intersection(Intersection *intersection, glm::vec3 a, glm
     	std::cout << "Unkown material type" << std::endl;
     	throw;
 	}
+
 	return color;
 }
 
@@ -319,6 +363,8 @@ glm::vec3 get_ray_color(glm::vec3 a, glm::vec3 b,
 		color = get_color_of_intersection(intersection, a, b, ambient, lights, hits_allowed, node, pixelx, pixely, imagew, imageh);
 	}
 	delete intersection;
+		// if (color.x < 0 || color.y < 0 || color.z < 0) std::cout << to_string(color) << std::endl;
+
 	return color;
 }
 

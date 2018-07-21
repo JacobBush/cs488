@@ -15,5 +15,8 @@ SpacePartition::~SpacePartition() {
 }
 
 void SpacePartition::initialize(SceneNode *root) {
-	
+	// Traverse the tree
+	// flatten the transfrom on to each node
+	// compute min/max of each node
+	// compute which region they would fit into
 }
