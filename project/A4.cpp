@@ -9,6 +9,8 @@
 #include "Dialectric.hpp"
 #include "SpacePartition.hpp"
 
+// DOF
+const uint NUM_CAMERA_POSITIONS = 1;
 
 const uint MAX_HITS = 1;
 const uint NUM_SAMPLES = 1;
@@ -400,7 +402,8 @@ glm::mat4 screen_to_world(uint nx, uint ny,
 
 void ray_trace(uint x, uint y, uint w, uint h,
 			   glm::vec3 eye, const glm::mat4 & S2W_transform, SceneNode *node,
-			   Image & image, const glm::vec3 & ambient, const std::list<Light *> & lights) {
+			   Image & image, const glm::vec3 & ambient, const std::list<Light *> & lights,
+			   double lens_size, double *camera_randomness) {
 
 	glm::vec3 col;
 
@@ -424,7 +427,16 @@ void ray_trace(uint x, uint y, uint w, uint h,
 					0.0, 1.0
 				));
 			}
-			color += get_ray_color(eye, pixel, ambient, lights, MAX_HITS, node, x, y, w, h, false);
+			if(lens_size == 0.0) {
+				color += get_ray_color(eye, pixel, ambient, lights, MAX_HITS, node, x, y, w, h, false);
+				continue;
+			}
+			for (int i = 0; i < NUM_CAMERA_POSITIONS; i++) {
+				color += get_ray_color(glm::vec3(eye.x + (camera_randomness[2*i] - 0.5)*lens_size, 
+							                     eye.y + (camera_randomness[2*i + 1] - 0.5)*lens_size, eye.z),
+									   pixel, ambient, lights, MAX_HITS, node, x, y, w, h, false) / NUM_CAMERA_POSITIONS;
+
+			}
 		}
 	}
 	color = color / (NUM_SAMPLES_EACH_DIR * NUM_SAMPLES_EACH_DIR);
@@ -483,6 +495,13 @@ void A4_Render(
 		sp = NULL;
 	}
 
+	// get random values for camera positions
+	double camera_randomness[2 * NUM_CAMERA_POSITIONS];
+	for (int i = 0; i < 2 * NUM_CAMERA_POSITIONS; i++) {
+		camera_randomness[i] = (double)rand()/RAND_MAX;
+	}
+
+
 	const uint TOTAL_PIXELS = h * w ;
 	double current_milestone = 0.00;
 
@@ -490,7 +509,7 @@ void A4_Render(
 
 	for (uint y = 0; y < h; ++y) {
 		for (uint x = 0; x < w; ++x) {
-			ray_trace(x,y,w,h,eye,S2W_transform,root,image,ambient,lights);
+			ray_trace(x,y,w,h,eye,S2W_transform,root,image,ambient,lights, lens_size, camera_randomness);
 
 			// progress indicator
 			if ((y * w + x + 1) / (double)TOTAL_PIXELS >= current_milestone - EPSILON ) {
