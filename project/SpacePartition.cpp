@@ -161,7 +161,10 @@ Intersection *SpacePartition::local_intersect(glm::vec3 a, glm::vec3 b, Geometry
 	b = glm::vec3(node->get_squashed_invtrans() * glm::vec4(b, 1.0));
 	Intersection *i = node->m_primitive->intersection(a, b, NULL);
 	i->node = node;
-	if (i->has_intersected) i->local_intersection = ray_point_at_parameter(a,b,i->t);
+	if (i->has_intersected) {
+		i->local_intersection = ray_point_at_parameter(a,b,i->t);
+		i->invtrans = node->get_squashed_invtrans();
+	}
 	return i;
 }
 
