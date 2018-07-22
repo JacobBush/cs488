@@ -10,10 +10,13 @@
 #include "SpacePartition.hpp"
 
 
-const uint MAX_HITS = 20;
-const uint NUM_SAMPLES = 4;
+const uint MAX_HITS = 1;
+const uint NUM_SAMPLES = 1;
 const uint NUM_SAMPLES_EACH_DIR = (uint)glm::sqrt(NUM_SAMPLES);
 const bool JITTERING = false;
+
+SpacePartition * sp; // just global - its easier
+const bool SPACE_PARTITIONING = true;
 
 const double EPSILON = 1.0/1024.0;
 const glm::vec3 ZERO_VECTOR3 = glm::vec3(0.0,0.0,0.0);
@@ -90,28 +93,25 @@ Intersection *recursive_intersect(glm::vec3 a, glm::vec3 b, SceneNode *node, glm
 								 Intersection * prev_intersection) {
 	// find intersects from ray defined by (b-a) = a -----> b
 
-	// already applied parent_trans recursively
-	a = glm::vec3(node->invtrans * glm::vec4(a,1));
-	b = glm::vec3(node->invtrans * glm::vec4(b,1));
-
-	glm::mat4 invtrans =  node->invtrans * parent_invtrans;
-	// glm::mat4 invtrans = node->invtrans * node->parent_squashed_invtrans;
-
-	// std::cout << to_string(parent_invtrans - node->parent_squashed_invtrans) << std::endl;
-
-	Intersection *i = intersect(a, b, node, prev_intersection);
-	i->invtrans = invtrans;
-	
-	for (SceneNode * child: node->children) {
-		Intersection *iprime = recursive_intersect(a, b, child, invtrans, prev_intersection);
-		if (!i->has_intersected || iprime->t < i->t) {
-			delete i;
-			i = iprime;
-		} else {
-			delete iprime;
+	if (SPACE_PARTITIONING) {
+		return sp->intersect(a,b);
+	} else {
+		glm::mat4 invtrans = node->get_squashed_invtrans();
+		glm::vec3 aprime = glm::vec3(invtrans * glm::vec4(a,1));
+		glm::vec3 bprime = glm::vec3(invtrans * glm::vec4(b,1));
+		Intersection *i = intersect(aprime, bprime, node, prev_intersection);
+		i->invtrans = invtrans;
+		for (SceneNode * child: node->children) {
+			Intersection *iprime = recursive_intersect(a, b, child, invtrans, prev_intersection);
+			if (!i->has_intersected || iprime->t < i->t) {
+				delete i;
+				i = iprime;
+			} else {
+				delete iprime;
+			}
 		}
+		return i;
 	}
-	return i;
 }
 
 glm::vec3 get_color_of_texturemap(Intersection * intersection, TextureMap *texmap) {
@@ -472,8 +472,13 @@ void A4_Render(
 
 	glm::mat4 S2W_transform = screen_to_world(w,h,eye,view,up,fovy);
 
-	SpacePartition * sp = new SpacePartition();
-	sp->initialize(root);
+	if (SPACE_PARTITIONING) {
+		sp = new SpacePartition();
+		sp->initialize(root);
+	}
+	else {
+		sp = NULL;
+	}
 
 	const uint TOTAL_PIXELS = h * w ;
 	double current_milestone = 0.00;
@@ -505,5 +510,6 @@ void A4_Render(
 	}
 	// used \r in progress indicator
 	std::cout << std::endl;
+	delete sp;
 }
 

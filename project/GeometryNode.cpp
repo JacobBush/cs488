@@ -38,3 +38,13 @@ void GeometryNode::setBumpMap( BumpMap * bm )
 {
 	m_bump_map = bm;
 }
+
+glm::vec3 GeometryNode::get_bb_bottom_left_corner() {
+	if (m_primitive == NULL) return glm::vec3(0.0);
+	return m_primitive->get_bb_bottom_left_corner();
+}
+
+glm::vec3 GeometryNode::get_bb_top_right_corner() {
+	if (m_primitive == NULL) return glm::vec3(0.0);
+	return m_primitive->get_bb_top_right_corner();
+}

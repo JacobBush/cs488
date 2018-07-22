@@ -379,3 +379,59 @@ glm::vec2 Cylinder::map_to_2d(glm::vec3 p) {
 	double x = bound_by_range(theta/(2.0 * PI), 0.0, 1.0);
 	return glm::vec2(x, bound_by_range(p.y + 0.5, 0.0, 1.0));
 }
+
+glm::vec3 Primitive::get_bb_bottom_left_corner() {
+	return glm::vec3(0.0);
+}
+
+glm::vec3 Primitive::get_bb_top_right_corner() {
+	return glm::vec3(0.0);
+}
+
+glm::vec3 Sphere::get_bb_bottom_left_corner() {
+	return glm::vec3(-1.0);
+}
+
+glm::vec3 Sphere::get_bb_top_right_corner() {
+	return glm::vec3(1.0);
+}
+
+glm::vec3 NonhierSphere::get_bb_bottom_left_corner() {
+	return m_pos - glm::vec3(m_radius);
+}
+
+glm::vec3 NonhierSphere::get_bb_top_right_corner() {
+	return m_pos + glm::vec3(m_radius);
+}
+
+glm::vec3 Cube::get_bb_bottom_left_corner() {
+	return glm::vec3(0.0);
+}
+
+glm::vec3 Cube::get_bb_top_right_corner() {
+	return glm::vec3(1.0);
+}
+
+glm::vec3 NonhierBox::get_bb_bottom_left_corner() {
+	return m_pos;
+}
+
+glm::vec3 NonhierBox::get_bb_top_right_corner() {
+	return m_pos + glm::vec3(m_size);
+}
+
+glm::vec3 Cylinder::get_bb_bottom_left_corner() {
+	return -glm::vec3(1.0, 0.5, 1.0);
+}
+
+glm::vec3 Cylinder::get_bb_top_right_corner() {
+	return glm::vec3(1.0, 0.5, 1.0);
+}
+
+glm::vec3 Torus::get_bb_bottom_left_corner() {
+	return -glm::vec3(1 + r, r, 1 + r);
+}
+
+glm::vec3 Torus::get_bb_top_right_corner() {
+	return glm::vec3(1 + r, r, 1 + r);
+}

@@ -17,6 +17,9 @@ public:
   Intersection *intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_intersection) override;
   glm::vec3 get_normal_at_point(glm::vec3 p, Intersection *intersection) override;
   glm::vec2 map_to_2d(glm::vec3 p) override;
+  // bounding volume
+  glm::vec3 get_bb_bottom_left_corner() override;
+  glm::vec3 get_bb_top_right_corner() override;
 
 protected:
 	const double BB_EPSILON = CUBE_BB_EPSILON * 256.0;

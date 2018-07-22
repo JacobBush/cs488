@@ -15,6 +15,10 @@ public:
 	void setTextureMap( TextureMap *texture_map );
 	void setBumpMap( BumpMap *bump_map );
 
+	// bounding volume
+	glm::vec3 get_bb_bottom_left_corner();
+	glm::vec3 get_bb_top_right_corner();
+
 	Material *m_material;
 	Primitive *m_primitive;
 

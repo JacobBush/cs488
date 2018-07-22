@@ -228,3 +228,12 @@ glm::vec2 Mesh::map_to_2d(glm::vec3 p) {
 	}
 	return Sphere().map_to_2d(glm::normalize(p-(min + max)/2.0));
 }
+
+
+glm::vec3 Mesh::get_bb_bottom_left_corner() {
+	return min;
+}
+
+glm::vec3 Mesh::get_bb_top_right_corner() {
+	return max;
+}

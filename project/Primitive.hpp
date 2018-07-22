@@ -10,6 +10,10 @@ public:
   virtual glm::vec3 get_normal_at_point(glm::vec3 p, Intersection *intersection);
   virtual glm::vec2 map_to_2d(glm::vec3 p);
 
+  // bounding volume
+  virtual glm::vec3 get_bb_bottom_left_corner();
+  virtual glm::vec3 get_bb_top_right_corner();
+
 protected:
   // 10^-10
   const double EPSILON = 1.0/512.0;
@@ -32,6 +36,9 @@ public:
   Intersection *intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_intersection) override;
   glm::vec3 get_normal_at_point(glm::vec3 p, Intersection *intersection) override;
   glm::vec2 map_to_2d(glm::vec3 p) override;
+  // bounding volume
+  glm::vec3 get_bb_bottom_left_corner() override;
+  glm::vec3 get_bb_top_right_corner() override;
 };
 
 class Cube : public Primitive {
@@ -43,6 +50,9 @@ public:
   Intersection *intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_intersection) override;
   glm::vec3 get_normal_at_point(glm::vec3 p, Intersection *intersection) override;
   glm::vec2 map_to_2d(glm::vec3 p) override;
+  // bounding volume
+  glm::vec3 get_bb_bottom_left_corner() override;
+  glm::vec3 get_bb_top_right_corner() override;
 
   bool is_bounding_box;
 
@@ -61,6 +71,9 @@ public:
   Intersection *intersection(glm::vec3 a, glm::vec3 b,Intersection * prev_intersection) override;
   glm::vec3 get_normal_at_point(glm::vec3 p, Intersection *intersection) override;
   glm::vec2 map_to_2d(glm::vec3 p) override;
+  // bounding volume
+  glm::vec3 get_bb_bottom_left_corner() override;
+  glm::vec3 get_bb_top_right_corner() override;
 
 private:
   glm::vec3 m_pos;
@@ -78,6 +91,9 @@ public:
   Intersection *intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_intersection) override;
   glm::vec3 get_normal_at_point(glm::vec3 p, Intersection *intersection) override;
   glm::vec2 map_to_2d(glm::vec3 p) override;
+  // bounding volume
+  glm::vec3 get_bb_bottom_left_corner() override;
+  glm::vec3 get_bb_top_right_corner() override;
 
 private:
   double intersect_side(uint side, bool front, glm::vec3 a, glm::vec3 b);
@@ -97,6 +113,9 @@ public:
   Intersection *intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_intersection) override;
   glm::vec3 get_normal_at_point(glm::vec3 p, Intersection *intersection) override;
   glm::vec2 map_to_2d(glm::vec3 p) override;
+  // bounding volume
+  glm::vec3 get_bb_bottom_left_corner() override;
+  glm::vec3 get_bb_top_right_corner() override;
 private:
   double r; // radius of tube
 };
@@ -110,4 +129,7 @@ public:
   Intersection *intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_intersection) override;
   glm::vec3 get_normal_at_point(glm::vec3 p, Intersection *intersection) override;
   glm::vec2 map_to_2d(glm::vec3 p) override;
+  // bounding volume
+  glm::vec3 get_bb_bottom_left_corner() override;
+  glm::vec3 get_bb_top_right_corner() override;
 };

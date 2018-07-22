@@ -44,8 +44,16 @@ public:
     // Transformations
     glm::mat4 trans;
     glm::mat4 invtrans;
+    bool squashed_invtrans_set;
+    glm::mat4 squashed_invtrans;
+    bool squashed_trans_set;
+    glm::mat4 squashed_trans;
     
+    glm::mat4 get_squashed_invtrans();
+    glm::mat4 get_squashed_trans();
+
     std::list<SceneNode*> children;
+    SceneNode *parent;
 
 	NodeType m_nodeType;
 	std::string m_name;
