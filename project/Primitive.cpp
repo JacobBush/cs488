@@ -97,11 +97,11 @@ Intersection *Cube::intersection(glm::vec3 a, glm::vec3 b, Intersection * prev_i
 	for (uint i = 0; i < 3; i++) {
 		for (uint j = 0; j <= 1; j++) {
 			double tprime = intersect_side(i, j, a, b);
-			if (isnan(t) || t < E || (!isnan(tprime) && tprime >= E && tprime < t))
+			if (std::isnan(t) || t < E || (!std::isnan(tprime) && tprime >= E && tprime < t))
 				t = tprime;
 		}
 	}
-	if (isnan(t) || t < E) {
+	if (std::isnan(t) || t < E) {
 		return new Intersection();
 	}
 	return new Intersection(t);
@@ -113,11 +113,11 @@ Intersection *NonhierBox::intersection(glm::vec3 a, glm::vec3 b, Intersection * 
 	for (uint i = 0; i < 3; i++) {
 		for (uint j = 0; j <= 1; j++) {
 			double tprime = intersect_side(i, j, a, b);
-			if (isnan(t) || t < CUBE_EPSILON || (!isnan(tprime) && tprime >= CUBE_EPSILON && tprime < t))
+			if (std::isnan(t) || t < CUBE_EPSILON || (!std::isnan(tprime) && tprime >= CUBE_EPSILON && tprime < t))
 				t = tprime;
 		}
 	}
-	if (isnan(t) || t < CUBE_EPSILON) {
+	if (std::isnan(t) || t < CUBE_EPSILON) {
 		return new Intersection();
 	}
 	return new Intersection(t);
@@ -167,7 +167,7 @@ double Cube::intersect_side(uint side, bool front, glm::vec3 a, glm::vec3 b) {
 	N[side] = sign;
 
 	double t = plane_intersection(p0, N, a, b);
-	if (isnan(t)) return nan("");
+	if (std::isnan(t)) return nan("");
 	glm::vec3 p = ray_point_at_parameter(a,b,t);
 	if (!point_on_side(p, side, front)) {
 		return nan("");
@@ -185,7 +185,7 @@ double NonhierBox::intersect_side(uint side, bool front, glm::vec3 a, glm::vec3 
 	N[side] = sign;
 
 	double t = plane_intersection(p0, N, a, b);
-	if (isnan(t)) return nan("");
+	if (std::isnan(t)) return nan("");
 	glm::vec3 p = ray_point_at_parameter(a,b,t);
 	if (!point_on_side(p, side, front)) {
 		return nan("");

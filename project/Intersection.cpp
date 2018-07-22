@@ -8,7 +8,7 @@ Intersection::Intersection(): has_intersected(false), t(nan("")), node(NULL), in
 
 
 Intersection::Intersection(double pt): Intersection() {
-	has_intersected = isnan(pt) ? false : true;
+	has_intersected = std::isnan(pt) ? false : true;
 	t = pt;
 }
 
