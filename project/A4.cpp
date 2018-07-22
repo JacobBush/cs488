@@ -446,7 +446,10 @@ void A4_Render(
 
 		// Lighting parameters
 		const glm::vec3 & ambient,
-		const std::list<Light *> & lights
+		const std::list<Light *> & lights,
+
+		// depth of field
+		double lens_size
 ) {
 
   // Fill in raytracing code here...
