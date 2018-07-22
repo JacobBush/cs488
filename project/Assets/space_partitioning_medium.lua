@@ -7,9 +7,12 @@ side_length = 100 -- side_length ^3 spheres
 for i = 1, side_length do
 	for j = 1, side_length do
 		for k = 1, side_length do
-		   s = gr.nh_sphere(
-		   	'sphere-' .. tostring(i) .. ', ' .. tostring(j) .. ', ' .. tostring(k),
-		   	{2.0*i - side_length, 2.0*j - side_length, 2.0*k - side_length}, 0.8)
+		   s = gr.nh_box(
+		   	'obj-' .. tostring(i) .. ', ' .. tostring(j) .. ', ' .. tostring(k),
+		   	{2.0*i - side_length, 2.0*j - side_length, 2.0*k - side_length}, 1.0)
+		   -- s = gr.mesh( 'obj-' .. tostring(i) .. ', ' .. tostring(j) .. ', ' .. tostring(k),
+		   	-- 'Assets/smstdodeca.obj' )
+		   s:translate(2.0*i - side_length, 2.0*j - side_length, 2.0*k - side_length)
 		   scene:add_child(s)
 		   s:set_material(mat1)
 		end

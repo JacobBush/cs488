@@ -120,7 +120,7 @@ void SpacePartition::fill(std::vector<GeometryNode *> parent_nodes) {
 		if (box_intersect(blc, trc, min, max)) nodes.push_back(node);
 	}
 	// std::cout << nodes.size() << std::endl;
-	// if (depth >= 5) return; // hopefully this is small enough for edge cases, large enough otherwise
+	// if (depth >= 10) return; // hopefully this is small enough for edge cases, large enough otherwise
 	if (nodes.size() > MAX_NODES) {
 		is_partitioned = true;
 		// subdivide:
