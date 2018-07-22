@@ -1,0 +1,114 @@
+Here we will have the examination of running times of with / without space partitioning:
+
+WITH space partitioning:
+
+Small space partitioning (50^3 = 125000 nodes):
+Calling A4_Render(
+	SceneNode:[name:scene, id:0]
+	Image(width:16, height:16)
+	eye:  vec3(0.000000, 2.000000, 30.000000)
+	view: vec3(0.000000, 0.000000, -1.000000)
+	up:   vec3(0.000000, 1.000000, 0.000000)
+	fovy: 50
+	ambient: vec3(0.400000, 0.400000, 0.400000)
+	lights{
+		L[vec3(0.800000, 0.800000, 0.800000), vec3(-200.000000, 202.000000, 430.000000), 1, 0, 0]
+	}
+)
+Current renderring progress:
+[--------------------] 100 %
+31.05user 0.08system 0:31.18elapsed 99%CPU (0avgtext+0avgdata 83908maxresident)k
+752inputs+8outputs (1major+150836minor)pagefaults 0swaps
+Medium space partitioning (100^3 = 1000000 nodes):
+Calling A4_Render(
+	SceneNode:[name:scene, id:0]
+	Image(width:16, height:16)
+	eye:  vec3(0.000000, 2.000000, 30.000000)
+	view: vec3(0.000000, 0.000000, -1.000000)
+	up:   vec3(0.000000, 1.000000, 0.000000)
+	fovy: 50
+	ambient: vec3(0.400000, 0.400000, 0.400000)
+	lights{
+		L[vec3(0.800000, 0.800000, 0.800000), vec3(-200.000000, 202.000000, 430.000000), 1, 0, 0]
+	}
+)
+Current renderring progress:
+[--------------------] 100 %
+258.39user 1.32system 4:19.72elapsed 99%CPU (0avgtext+0avgdata 642284maxresident)k
+0inputs+8outputs (0major+1983756minor)pagefaults 0swaps
+Large space partitioning (200^3 = 8000000 nodes):
+Calling A4_Render(
+	SceneNode:[name:scene, id:0]
+	Image(width:16, height:16)
+	eye:  vec3(0.000000, 2.000000, 30.000000)
+	view: vec3(0.000000, 0.000000, -1.000000)
+	up:   vec3(0.000000, 1.000000, 0.000000)
+	fovy: 50
+	ambient: vec3(0.400000, 0.400000, 0.400000)
+	lights{
+		L[vec3(0.800000, 0.800000, 0.800000), vec3(-200.000000, 202.000000, 430.000000), 1, 0, 0]
+	}
+)
+Current renderring progress:
+[--------------------] 100 %
+2134.50user 28.43system 36:03.05elapsed 99%CPU (0avgtext+0avgdata 5285348maxresident)k
+0inputs+8outputs (0major+46100617minor)pagefaults 0swaps
+End of Test.
+
+
+WITHOUT space partitioning
+
+
+
+Small space partitioning (50^3 = 125000 nodes):
+Calling A4_Render(
+	SceneNode:[name:scene, id:0]
+	Image(width:16, height:16)
+	eye:  vec3(0.000000, 2.000000, 30.000000)
+	view: vec3(0.000000, 0.000000, -1.000000)
+	up:   vec3(0.000000, 1.000000, 0.000000)
+	fovy: 50
+	ambient: vec3(0.400000, 0.400000, 0.400000)
+	lights{
+		L[vec3(0.800000, 0.800000, 0.800000), vec3(-200.000000, 202.000000, 430.000000), 1, 0, 0]
+	}
+)
+Current renderring progress:
+[--------------------] 100 %
+17.82user 0.08system 0:17.92elapsed 99%CPU (0avgtext+0avgdata 71288maxresident)k
+752inputs+8outputs (1major+100916minor)pagefaults 0swaps
+Medium space partitioning (100^3 = 1000000 nodes):
+Calling A4_Render(
+	SceneNode:[name:scene, id:0]
+	Image(width:16, height:16)
+	eye:  vec3(0.000000, 2.000000, 30.000000)
+	view: vec3(0.000000, 0.000000, -1.000000)
+	up:   vec3(0.000000, 1.000000, 0.000000)
+	fovy: 50
+	ambient: vec3(0.400000, 0.400000, 0.400000)
+	lights{
+		L[vec3(0.800000, 0.800000, 0.800000), vec3(-200.000000, 202.000000, 430.000000), 1, 0, 0]
+	}
+)
+Current renderring progress:
+[--------------------] 100 %
+147.74user 0.92system 2:28.67elapsed 99%CPU (0avgtext+0avgdata 539804maxresident)k
+0inputs+8outputs (0major+1538779minor)pagefaults 0swaps
+Large space partitioning (200^3 = 8000000 nodes):
+Calling A4_Render(
+	SceneNode:[name:scene, id:0]
+	Image(width:16, height:16)
+	eye:  vec3(0.000000, 2.000000, 30.000000)
+	view: vec3(0.000000, 0.000000, -1.000000)
+	up:   vec3(0.000000, 1.000000, 0.000000)
+	fovy: 50
+	ambient: vec3(0.400000, 0.400000, 0.400000)
+	lights{
+		L[vec3(0.800000, 0.800000, 0.800000), vec3(-200.000000, 202.000000, 430.000000), 1, 0, 0]
+	}
+)
+Current renderring progress:
+[--------------------] 100 %
+1184.74user 14.62system 19:59.41elapsed 99%CPU (0avgtext+0avgdata 4402928maxresident)k
+0inputs+8outputs (0major+24848570minor)pagefaults 0swaps
+End of Test.

@@ -14,10 +14,11 @@ public:
 	void initialize(SceneNode *root);
 
 private:
-	SpacePartition(glm::vec3 min, glm::vec3 max, std::vector<GeometryNode *> parent_nodes, uint depth);
+	SpacePartition(glm::vec3 posn, double size, std::vector<GeometryNode *> parent_nodes, uint depth);
 	glm::vec3 get_bot_left_corner(SceneNode * node);
 	glm::vec3 get_top_right_corner(SceneNode * node);
 
+	void partition();
 	void fill_root();
 	void fill(std::vector<GeometryNode *> parent_nodes);
 	void recursive_fill_root(SceneNode * node);
@@ -26,6 +27,7 @@ private:
 	glm::vec3 ray_point_at_parameter(const glm::vec3 & a, const glm::vec3 & b, double t);
 
 	Intersection *local_intersect(glm::vec3 a, glm::vec3 b, GeometryNode *node);
+	Intersection * bb_intersect(glm::vec3 a, glm::vec3 b);
 
 	static const int MAX_NODES = 50;
 
@@ -33,8 +35,8 @@ private:
 	std::vector<GeometryNode *> nodes; 
 
 	SceneNode * root;
-	glm::vec3 min;
-	glm::vec3 max;
+	glm::vec3 posn; // bot left corner
+	double size; // side length
 	bool is_partitioned;
 	const uint depth;
 };
