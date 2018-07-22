@@ -18,6 +18,6 @@ end
 
 
 gr.render(scene,
-	  'space_partitioning_small.png', 256, 256,
+	  'space_partitioning_small.png', 16, 16,
 	  {0, 2, 30}, {0, 0, -1}, {0, 1, 0}, 50,
 	  {0.4, 0.4, 0.4}, {gr.light({-200, 202, 430}, {0.8, 0.8, 0.8}, {1, 0, 0})})
