@@ -2,7 +2,7 @@ mat1 = gr.material({0.4, 0.4, 0.4}, {0.0, 0.0, 0.0}, 0)
 
 scene = gr.node('scene')
 
-side_length = 10 -- side_length ^3 spheres
+side_length = 50 -- side_length ^3 spheres
 
 for i = 1, side_length do
 	for j = 1, side_length do
