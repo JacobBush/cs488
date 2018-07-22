@@ -8,6 +8,7 @@
 #include "PhongMaterial.hpp"
 #include "Dialectric.hpp"
 #include "SpacePartition.hpp"
+#include "PhotonMap.hpp"
 
 // DOF
 const uint NUM_CAMERA_POSITIONS = 1;
@@ -18,7 +19,7 @@ const uint NUM_SAMPLES_EACH_DIR = (uint)glm::sqrt(NUM_SAMPLES);
 const bool JITTERING = false;
 
 SpacePartition * sp; // just global - its easier
-const bool SPACE_PARTITIONING = false; // turn on if a lot of GeoemetryNodes
+const bool SPACE_PARTITIONING = true; // turn on if a lot of GeoemetryNodes
 
 const double EPSILON = 1.0/1024.0;
 const glm::vec3 ZERO_VECTOR3 = glm::vec3(0.0,0.0,0.0);
