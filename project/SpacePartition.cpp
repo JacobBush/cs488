@@ -14,7 +14,7 @@ SpacePartition::SpacePartition():
 	for (uint i = 0; i < 8; i++) children[i] = NULL;
 }
 
-SpacePartition::SpacePartition(glm::vec3 min, glm::vec3 max, SceneNode * root, uint depth):
+SpacePartition::SpacePartition(glm::vec3 min, glm::vec3 max, std::vector<GeometryNode *> parent_nodes, uint depth):
 	min(min),
 	max(max),
 	root(root),
@@ -23,7 +23,7 @@ SpacePartition::SpacePartition(glm::vec3 min, glm::vec3 max, SceneNode * root, u
 	is_partitioned(false)
 {
 	for (uint i = 0; i < 8; i++) children[i] = NULL;
-	fill();
+	fill(parent_nodes);
 }
 
 SpacePartition::~SpacePartition() {
@@ -111,48 +111,83 @@ bool SpacePartition::box_intersect(glm::vec3 b1, glm::vec3 t1, glm::vec3 b2, glm
 	return false;
 }
 
-void SpacePartition::recursive_fill(SceneNode * node) {
-	for (SceneNode * child : node->children) {
-		recursive_fill(child);
-	}
-	if (node->m_nodeType != NodeType::GeometryNode) return;
-	GeometryNode * gnode = (GeometryNode *)node;
-	glm::vec3 blc = glm::vec3(glm::vec4(gnode->get_bb_bottom_left_corner(),1.0) * gnode->get_squashed_trans());
-	glm::vec3 trc = glm::vec3(glm::vec4(gnode->get_bb_top_right_corner(),1.0) * gnode->get_squashed_trans());
-	if (box_intersect(blc, trc, min, max)) nodes.push_back(gnode);
-}
-
 // Will fill based on nodes whose bb intersects with min/max box.
 // If more than MAX_NODES nodes, will subdivide
-void SpacePartition::fill() {
-	recursive_fill(root);
-	if (depth >= 5) return;
+void SpacePartition::fill(std::vector<GeometryNode *> parent_nodes) {
+	for (GeometryNode * node : parent_nodes) {
+		glm::vec3 blc = glm::vec3(glm::vec4(node->get_bb_bottom_left_corner(),1.0) * node->get_squashed_trans());
+		glm::vec3 trc = glm::vec3(glm::vec4(node->get_bb_top_right_corner(),1.0) * node->get_squashed_trans());
+		if (box_intersect(blc, trc, min, max)) nodes.push_back(node);
+	}
+	// std::cout << nodes.size() << std::endl;
+	// if (depth >= 5) return; // hopefully this is small enough for edge cases, large enough otherwise
 	if (nodes.size() > MAX_NODES) {
 		is_partitioned = true;
 		// subdivide:
 		glm::vec3 midpoint = (max + min)/2.0;
 		// bot left front
-		children[0] = new SpacePartition(min, midpoint, root, depth + 1);
+		children[0] = new SpacePartition(min, midpoint, nodes, depth + 1);
 		// bot right front
 		children[1] = new SpacePartition(glm::vec3(midpoint.x, min.y, min.z), 
-										 glm::vec3(max.x, midpoint.y, midpoint.z), root, depth + 1);
+										 glm::vec3(max.x, midpoint.y, midpoint.z), nodes, depth + 1);
 		// top left front
 		children[2] = new SpacePartition(glm::vec3(min.x, midpoint.y, min.z), 
-										 glm::vec3(midpoint.x, max.y, midpoint.z), root, depth + 1);
+										 glm::vec3(midpoint.x, max.y, midpoint.z), nodes, depth + 1);
 		// top right front
 		children[3] = new SpacePartition(glm::vec3(midpoint.x, midpoint.y, min.z), 
-										 glm::vec3(max.x, max.y, midpoint.z), root, depth + 1);
+										 glm::vec3(max.x, max.y, midpoint.z), nodes, depth + 1);
 		// bot left back
 		children[4] = new SpacePartition(glm::vec3(min.x, min.y, midpoint.z), 
-										 glm::vec3(midpoint.x, midpoint.y, max.z), root, depth + 1);
+										 glm::vec3(midpoint.x, midpoint.y, max.z), nodes, depth + 1);
 		// bot right back
 		children[5] = new SpacePartition(glm::vec3(midpoint.x, min.y, midpoint.z), 
-										 glm::vec3(max.x, midpoint.y, max.z), root, depth + 1);
+										 glm::vec3(max.x, midpoint.y, max.z), nodes, depth + 1);
 		// top left back
 		children[6] = new SpacePartition(glm::vec3(min.x, midpoint.y, midpoint.z), 
-										 glm::vec3(midpoint.x, max.y, max.z), root, depth + 1);
+										 glm::vec3(midpoint.x, max.y, max.z), nodes, depth + 1);
 		// top right back
-		children[7] = new SpacePartition(midpoint, max, root, depth + 1);
+		children[7] = new SpacePartition(midpoint, max, nodes, depth + 1);
+	}
+}
+
+void SpacePartition::recursive_fill_root(SceneNode * node) {
+	for (SceneNode * child : node->children) {
+		recursive_fill_root(child);
+	}
+	if (node->m_nodeType != NodeType::GeometryNode) return;
+	nodes.push_back((GeometryNode *)node);
+}
+
+
+void SpacePartition::fill_root() {
+	recursive_fill_root(root);
+	// Should have all of the nodes
+	if (nodes.size() > MAX_NODES) { // copy-pasted
+		is_partitioned = true;
+		// subdivide:
+		glm::vec3 midpoint = (max + min)/2.0;
+		// bot left front
+		children[0] = new SpacePartition(min, midpoint, nodes, depth + 1);
+		// bot right front
+		children[1] = new SpacePartition(glm::vec3(midpoint.x, min.y, min.z), 
+										 glm::vec3(max.x, midpoint.y, midpoint.z), nodes, depth + 1);
+		// top left front
+		children[2] = new SpacePartition(glm::vec3(min.x, midpoint.y, min.z), 
+										 glm::vec3(midpoint.x, max.y, midpoint.z), nodes, depth + 1);
+		// top right front
+		children[3] = new SpacePartition(glm::vec3(midpoint.x, midpoint.y, min.z), 
+										 glm::vec3(max.x, max.y, midpoint.z), nodes, depth + 1);
+		// bot left back
+		children[4] = new SpacePartition(glm::vec3(min.x, min.y, midpoint.z), 
+										 glm::vec3(midpoint.x, midpoint.y, max.z), nodes, depth + 1);
+		// bot right back
+		children[5] = new SpacePartition(glm::vec3(midpoint.x, min.y, midpoint.z), 
+										 glm::vec3(max.x, midpoint.y, max.z), nodes, depth + 1);
+		// top left back
+		children[6] = new SpacePartition(glm::vec3(min.x, midpoint.y, midpoint.z), 
+										 glm::vec3(midpoint.x, max.y, max.z), nodes, depth + 1);
+		// top right back
+		children[7] = new SpacePartition(midpoint, max, nodes, depth + 1);
 	}
 }
 
@@ -200,10 +235,12 @@ Intersection *SpacePartition::intersect(glm::vec3 a, glm::vec3 b) {
 	}
 }
 
+
+
 //
 void SpacePartition::initialize(SceneNode *root) {
 	this->root = root;
 	this->min = get_bot_left_corner(root);
 	this->max = get_top_right_corner(root);
-	fill();
+	fill_root();
 }
