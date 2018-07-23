@@ -31,4 +31,4 @@ orange_light = gr.light({400.0, 100.0, 150.0}, {0.7, 0.0, 0.7}, {1, 0, 0})
 
 gr.render(scene_root, 'simple.png', 400, 400,
 	  {0, 0, 800}, {0, 0, -800}, {0, 1, 0}, 50,
-	  {0.3, 0.3, 0.3}, {white_light, orange_light})
+	  {0.3, 0.3, 0.3}, {white_light, orange_light}, 0.0)
