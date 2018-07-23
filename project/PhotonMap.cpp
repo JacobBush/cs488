@@ -106,7 +106,7 @@ double PhotonMap::get_light_density_at_point(const glm::vec3 &p) {
 	// std::cout << num_photons_expected << std::endl;
 	// std::cout << num_photons_expected << std::endl;
 	// std::cout << (NUM_PHOTONS_TO_SEARCH/(area_searched * NUM_PHOTONS_PER_LIGHT * lights.size())) << std::endl;
-	return (NUM_PHOTONS_TO_SEARCH/(area_searched * NUM_PHOTONS_PER_LIGHT * lights.size()));
+	return (NUM_PHOTONS_TO_SEARCH/(area_searched * num_photons_captured));
 }
 
 void PhotonMap::initialize() {
@@ -114,6 +114,6 @@ void PhotonMap::initialize() {
 		cast_photons_from_light(light);
 	}
 	std::cout << "Photons captured for caustics :" << num_photons_captured  << std::endl;
-	index = new my_kd_tree_t(3 /*dim*/, photon_cloud, nanoflann::KDTreeSingleIndexAdaptorParams(700 /* max leaf */) );
+	index = new my_kd_tree_t(3 /*dim*/, photon_cloud, nanoflann::KDTreeSingleIndexAdaptorParams(2000 /* max leaf */) );
 	index->buildIndex();
 }

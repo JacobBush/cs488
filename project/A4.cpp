@@ -14,7 +14,7 @@
 const uint NUM_CAMERA_POSITIONS = 1;
 
 const uint MAX_HITS = 5;
-const uint NUM_SAMPLES = 9;
+const uint NUM_SAMPLES = 16;
 const uint NUM_SAMPLES_EACH_DIR = (uint)glm::sqrt(NUM_SAMPLES);
 const bool JITTERING = false;
 
@@ -216,7 +216,7 @@ glm::vec3 get_color_of_intersection_phong(Intersection *intersection, PhongMater
   	glm::vec3 col = ke + AMBIENT_DAMPING_FACTOR * entrywise_multiply(kd, ambient); // ka = kd
 
   	if (PHOTON_MAPPING) {
-		static const double PHOTON_SCALAR = 500000;
+		static const double PHOTON_SCALAR = 20.0;
   		double photon_density = pm->get_light_density_at_point(ray_point_at_parameter(a,b,intersection->t));
   		col += kd * photon_density * PHOTON_SCALAR;
   	}

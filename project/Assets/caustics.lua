@@ -27,10 +27,10 @@ s1 = gr.sphere('s1');
 scene:add_child(s1)
 s1:set_material(dial)
 s1:scale(5.0, 5.0, 5.0)
-s1:translate(3.0, 4.0, 8.0)
+s1:translate(3.0, 5.0, 8.0)
 
 
 gr.render(scene,
-	  'caustics.png', 1024, 1024,
+	  'caustics.png', 256, 256,
 	  {0, 2, 30}, {0, 0, -1}, {0, 1, 0}, 50,
-	  {0.4, 0.4, 0.4}, {gr.light({0, 202, 0}, {0.8, 0.8, 0.8}, {1, 0, 0})}, 0.0)
+	  {0.4, 0.4, 0.4}, {gr.light({100, 202, 0}, {0.8, 0.8, 0.8}, {1, 0, 0})}, 0.0)
