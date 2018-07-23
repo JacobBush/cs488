@@ -45,3 +45,6 @@ this no longer being Assignment 4.
 	8.  Antialiasing
 	9.  Depth of Field
 	10. Final Scene
+
+## Disclaimer
+This program has not been thoroughly tested, and is not intended for use outside the scope of this project.
