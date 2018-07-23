@@ -11,18 +11,18 @@
 #include "PhotonMap.hpp"
 
 // DOF
-const uint NUM_CAMERA_POSITIONS = 4;
+const uint NUM_CAMERA_POSITIONS = 1;
 
-const uint MAX_HITS = 5;
-const uint NUM_SAMPLES = 4;
+const uint MAX_HITS = 1;
+const uint NUM_SAMPLES = 16;
 const uint NUM_SAMPLES_EACH_DIR = (uint)glm::sqrt(NUM_SAMPLES);
 const bool JITTERING = false;
 
 SpacePartition * sp; // just global - its easier
-const bool SPACE_PARTITIONING = true; // turn on if a lot of GeoemetryNodes
+const bool SPACE_PARTITIONING = false; // turn on if a lot of GeoemetryNodes
 
 PhotonMap * pm; // just global - its easier
-const bool PHOTON_MAPPING = true; // turn on if a lot of GeoemetryNodes
+const bool PHOTON_MAPPING = false; // turn on if a lot of GeoemetryNodes
 
 
 const double EPSILON = 1.0/1024.0;
