@@ -11,10 +11,10 @@
 #include "PhotonMap.hpp"
 
 // DOF
-const uint NUM_CAMERA_POSITIONS = 20;
+const uint NUM_CAMERA_POSITIONS = 5;
 
-const uint MAX_HITS = 20;
-const uint NUM_SAMPLES = 16;
+const uint MAX_HITS = 5;
+const uint NUM_SAMPLES = 4;
 const uint NUM_SAMPLES_EACH_DIR = (uint)glm::sqrt(NUM_SAMPLES);
 const bool JITTERING = true;
 
