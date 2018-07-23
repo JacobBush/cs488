@@ -216,8 +216,9 @@ glm::vec3 get_color_of_intersection_phong(Intersection *intersection, PhongMater
   	glm::vec3 col = ke + AMBIENT_DAMPING_FACTOR * entrywise_multiply(kd, ambient); // ka = kd
 
   	if (PHOTON_MAPPING) {
+		static const double PHOTON_SCALAR = 500000;
   		double photon_density = pm->get_light_density_at_point(ray_point_at_parameter(a,b,intersection->t));
-  		col += kd * photon_density * 500000;
+  		col += kd * photon_density * PHOTON_SCALAR;
   	}
 
   	glm::vec3 p = ray_point_at_parameter(a, b, intersection->t);
