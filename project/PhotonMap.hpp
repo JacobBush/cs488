@@ -1,7 +1,7 @@
 #pragma once
 #include "SpacePartition.hpp"
 #include "Light.hpp"
-#include <nanoflann.hpp>
+#include "nanoflann.hpp"
 #include "utils.h" // PointCloud for nanoflann
 #include <list>
 #include <glm/glm.hpp>
