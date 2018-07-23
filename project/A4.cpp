@@ -13,13 +13,17 @@
 // DOF
 const uint NUM_CAMERA_POSITIONS = 1;
 
-const uint MAX_HITS = 1;
-const uint NUM_SAMPLES = 1;
+const uint MAX_HITS = 5;
+const uint NUM_SAMPLES = 9;
 const uint NUM_SAMPLES_EACH_DIR = (uint)glm::sqrt(NUM_SAMPLES);
 const bool JITTERING = false;
 
 SpacePartition * sp; // just global - its easier
 const bool SPACE_PARTITIONING = true; // turn on if a lot of GeoemetryNodes
+
+PhotonMap * pm; // just global - its easier
+const bool PHOTON_MAPPING = true; // turn on if a lot of GeoemetryNodes
+
 
 const double EPSILON = 1.0/1024.0;
 const glm::vec3 ZERO_VECTOR3 = glm::vec3(0.0,0.0,0.0);
@@ -196,6 +200,7 @@ glm::vec3 get_color_of_intersection_phong(Intersection *intersection, PhongMater
 										  uint imagew, uint imageh) {
 
 	const static double AMBIENT_DAMPING_FACTOR = 0.6;
+	const static double PHOTON_SCALING_FACTOR = 1.0;
 	const static double REFLECTION_DAMPING_FACTOR = 0.5;
 
 	glm::vec3 ke = glm::vec3(0.0,0.0,0.0); // The objects are non-emittive
@@ -209,6 +214,11 @@ glm::vec3 get_color_of_intersection_phong(Intersection *intersection, PhongMater
 		kd = get_color_of_texturemap(intersection, texmap);
 
   	glm::vec3 col = ke + AMBIENT_DAMPING_FACTOR * entrywise_multiply(kd, ambient); // ka = kd
+
+  	if (PHOTON_MAPPING) {
+  		double photon_density = pm->get_light_density_at_point(ray_point_at_parameter(a,b,intersection->t));
+  		col += kd * photon_density * 500000;
+  	}
 
   	glm::vec3 p = ray_point_at_parameter(a, b, intersection->t);
 	glm::vec3 p_model = intersection->local_intersection;
@@ -491,9 +501,15 @@ void A4_Render(
 	if (SPACE_PARTITIONING) {
 		sp = new SpacePartition();
 		sp->initialize(root);
+		if (PHOTON_MAPPING) { // require space partition for photon mapping
+			pm = new PhotonMap(lights, sp);
+		} else {
+			pm = NULL;
+		}
 	}
 	else {
 		sp = NULL;
+		pm = NULL;
 	}
 
 	// get random values for camera positions
